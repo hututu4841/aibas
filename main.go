@@ -1,7 +1,7 @@
-package shellcode
+package main
 
 import "fmt"
 
 func main() {
-	fmt.Println("hello.Greet()")
+	fmt.Println("Hello, World!")
 }
