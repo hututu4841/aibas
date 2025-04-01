@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -57,9 +58,12 @@ func main() {
 				for k := 0; k < 5; k++ {
 					for l := 0; l < 5; l++ {
 						// 插入无害空循环
-						do {
+						for {
 							time.Sleep(100 * time.Millisecond)
-						} while randInt(10) != 1
+							if rand.Intn(10) == 1 {
+								break
+							}
+						}
 					}
 				}
 			}
