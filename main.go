@@ -93,7 +93,8 @@ func main() {
 	if *debug {
 		fmt.Println("[DEBUG] Calling CreateThread...")
 	}
-	thread, _, errCreateThread := CreateThread.Call(0, 0, addr, uintptr(0), 0, 0)
+	// var lpThreadId uint32
+	thread, _, errCreateThread := CreateThread.Call(0, 0, uintptr(addr), uintptr(0), 0, 0)
 
 	if errCreateThread != nil && errCreateThread.Error() != "The operation completed successfully." {
 		log.Fatal(fmt.Sprintf("[!] Error calling CreateThread:\r\n%s", errCreateThread.Error()))
