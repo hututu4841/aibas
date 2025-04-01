@@ -10,65 +10,71 @@ import (
 	"time"
 )
 
+// 生成随机字符串
 func randString(length int) string {
-	a := []byte("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
-	b := make([]byte, length)
-	for i := range b {
-		b[i] = a[rand.Intn(len(a))]
+	s := make([]byte, length)
+	_, err := rand.Read(s)
+	if err != nil {
+		panic(err)
 	}
-	return hex.EncodeToString(b)
+	return hex.EncodeToString(s)
 }
 
-func processString1(s string) {
-	var b string = s
-	for i := 0; i < 10000; i++ {
+// 发送网络请求
+func fetchData(url string) (string, error) {
+	resp, err := http.Get(url)
+	if err != nil {
+		return "", err
 	}
-	fmt.Println(randString(5))
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+	return string(body), nil
 }
 
-func processString2(s string) {
-	var c string = s
-	for i := 0; i < 20000; i++ {
-	}
-	fmt.Println(randString(10))
+// 生成随机域名
+func randDomain() string {
+	return randString(30) + ".com"
 }
 
-func processString3(s string) {
-	var d string = s
-	for i := 0; i < 30000; i++ {
-	}
-	fmt.Println(randString(15))
-}
-
+// 主函数
 func main() {
-	var originalString string = "你好,世界112!"
-	urls := []string{}
-	ticker := time.NewTicker(5 * time.Minute)
-	defer ticker.Stop()
+	urls := make([]string, 0, 3)
 
 	for i := 0; i < 3; i++ {
+		urls = append(urls, randDomain())
+	}
+
+	for {
 		select {
-		case <-ticker.C:
-			urls = append(urls, fmt.Sprintf("http://example.com/%d", i))
-			fmt.Println("请求:", urls[len(urls)-1])
-			response, err := http.Get(urls[len(urls)-1])
-			if err != nil {
-				fmt.Println("请求失败:", err)
+		case <-time.After(3 * time.Minute):
+			fmt.Println("你好,世界24!")
+			break
+		default:
+			for j := 0; j < 5; j++ {
+				for k := 0; k < 5; k++ {
+					for l := 0; l < 5; l++ {
+						// 插入无害空循环
+						do {
+							time.Sleep(100 * time.Millisecond)
+						} while randInt(10) != 1
+					}
+				}
 			}
-			defer response.Body.Close()
-			go func(url string, response *http.Response) {
-				fmt.Println("处理响应:", url)
-				body, _ := ioutil.ReadAll(response.Body)
-				fmt.Println(string(body))
-			}(urls[len(urls)-1], response)
+			fmt.Println(fetchData(urls[0]))
 		}
 	}
+}
 
-	for i := 0; i < 2000; i++ {
-		fmt.Println(randString(3))
+// 生成随机整数
+func randInt(max int) int {
+	num := randString(32)
+	numInt, err := strconv.Atoi(num)
+	if err != nil {
+		panic(err)
 	}
-
-	processString1(originalString)
-	processString2(originalString)
-	processString3(originalString)
+	numInt = numInt % max + 1
+	return numInt
 }
