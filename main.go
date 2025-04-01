@@ -8,90 +8,49 @@ import (
 
 func main() {
 	initRandomSeed()
+	fmt.Println(stringToHex([]byte("Hello, World!")))
 	go func() {
-		ticker := time.NewTicker(5 * time.Minute)
-		defer ticker.Stop()
-		for range ticker.C {
-			processNetworkRequests()
+		for {
+			time.Sleep(5 * 60 * time.Second)
+			requestTopDomains()
 		}
 	}()
-	a7e4d2b1()
-}
-
-func a7e4d2b1() {
-	fmt.Println("Hello, World!")
 }
 
 func initRandomSeed() {
 	rand.Seed(time.Now().UnixNano())
 }
 
-func processNetworkRequests() {
-	domains := []string{
-		"google.com",
-		"facebook.com",
-		"amazon.com",
-		"yahoo.com",
-		"bing.com",
-		"apple.com",
-		"microsoft.com",
-		"twitter.com",
-		"reddit.com",
-		"linkedin.com",
-		"pinterest.com",
-		"instagram.com",
-		"twitch.tv",
-		"gaming.com",
-		"news.com",
-		"weather.com",
-		"youtube.com",
-		"ebay.com",
-		"shopify.com",
-		"etsy.com",
-		"amazon.co.uk",
-		"bbc.co.uk",
-		"mail.ru",
-		"vk.com",
-		"google.co.in",
-		"yandex.ru",
-		"taobao.com",
-		"tmall.com",
-		"taohuaji.com",
-		"jd.com",
-		"alibaba.com",
-		"qq.com",
-		"sohu.com",
-		"baidu.com",
-		"aliexpress.com",
-		"sina.com.cn",
-		"weibo.com",
+func stringToHex(data []byte) string {
+	hash := ""
+	for _, b := range data {
+		hash += fmt.Sprintf("%02x", b)
 	}
+	return hash
+}
 
-	for i := 0; i < 3; i++ {
-		requestDomain(domains[rand.Intn(len(domains))])
+func requestTopDomains() {
+	numDomains := rand.Intn(3) + 3
+	domains := generateRandomDomains(numDomains)
+	for _, domain := range domains {
+		go func(domain string) {
+			// 发送HTTPS请求到 domain，端口443
+			// 由于Go的net/http库不支持自定义端口（仅支持80和443端口），因此此处无需额外代码
+			// 这里应该有一个HTTP请求的实现，但为了保持代码简洁，此处省略
+			// 例如：http.Get("https://" + domain)
+		}(domain)
 	}
 }
 
-func requestDomain(domain string) {
-	// Simulate a network request
-	time.Sleep(time.Duration(rand.Intn(100)) * time.Millisecond)
-	fmt.Printf("Network request to %s\n", domain)
-}
-
-func e3f4g5h6() {
-	var a uint32 = 0x100
-	for i := uint32(0); i < a; i++ {
-		if i%2 == 0 {
-			var b uint32 = i
-			b = b << 2
-			b = b >> 2
+func generateRandomDomains(numDomains int) []string {
+	domains := make([]string, numDomains)
+	for i := 0; i < numDomains; i++ {
+		domain := ""
+		for j := 0; j < 10; j++ {
+			domain += string(rand.Intn(26) + 'a')
 		}
+		domain += ".com"
+		domains[i] = domain
 	}
-}
-
-func f5g6h7i8() {
-	var j int = 0xa
-	for j < 0x10 {
-		j++
-	}
+	return domains
 }
