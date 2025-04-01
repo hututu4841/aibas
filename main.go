@@ -1,58 +1,46 @@
 package main
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
-	"math/rand"
-	"time"
+	"net/http"
+	"net/url"
+	"sync"
 )
 
 func main() {
-	initRandomSeed()
+	var wg sync.WaitGroup
+	wg.Add(1)
 	go func() {
-		ticker := time.NewTicker(5 * time.Minute)
-		defer ticker.Stop()
-		for range ticker.C {
-			targetDomains := getRandomDomains(3)
-			for _, domain := range targetDomains {
-				go func(domain string) {
-					_ = makeHTTPSRequest(domain)
-				}(domain)
-			}
+		defer wg.Done()
+		for i := 0; i < 54; i++ {
+			fmt.Printf("迭代%d: ", hex.EncodeToString(randomHash()[:64])))
 		}
 	}()
-	printMessage()
+	fmt.Println("你好,世界111!")
 }
 
-func initRandomSeed() {
-	rand.Seed(time.Now().UnixNano())
-}
-
-func getRandomDomains(count int) []string {
-	domains := []string{
-		"example1.com",
-		"example2.com",
-		"example3.com",
-		// ... 省略其他域名
-		"example100.com",
+func randomHash() []byte {
+	const randStr = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+	buf := make([]byte, 16)
+	for i := range buf {
+		buf[i] = randStr[rand.Intn(len(randStr))]
 	}
-	result := make([]string, count)
-	for i := 0; i < count; i++ {
-		result[i] = domains[rand.Intn(len(domains))]
-	}
-	return result
+	return buf
 }
 
-func makeHTTPSRequest(domain string) error {
-	// 模拟HTTP请求
-	time.Sleep(1 * time.Second)
-	return nil
-}
-
-func printMessage() {
-	var f1 string = "你好,世界111"
-	var i1 int = 0
-	for i1 < 1 {
-		fmt.Println(f1)
-		i1 = i1 + 1
+func requestRandomDomain() (string, error) {
+	urlStr := fmt.Sprintf("https://api.random.com?count=3")
+	resp, err := http.NewRequest("GET", urlStr, nil)
+	if err != nil {
+		return "", err
 	}
+	client := &http.Client{}
+	resp, err = client.Do(resp)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	return resp.URL.Host, nil
 }
