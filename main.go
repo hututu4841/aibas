@@ -1,32 +1,71 @@
 package main
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
-	"math/rand"
+	"net/http"
+	"sync"
 	"time"
 )
 
-func main() {
-	rand.Seed(time.Now().UnixNano())
-	t1 := time.Now()
-	go func() {
-		for range time.Tick(5 * time.Minute) {
-			d := rand.Intn(100)
-			fmt.Println(requestDomain(d))
-		}
-	}()
-	fmt.Println("你好,世界1112!")
+func randString(length int) string {
+	a := []byte("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
+	b := make([]byte, length)
+	for i := range b {
+		b[i] = a[rand.Intn(len(a))]
+	}
+	return hex.EncodeToString(b)
 }
 
-func requestDomain(d int) string {
-	domains := []string{
-		"https://www.baidu.com",
-		"https://www.qq.com",
-		"https://www.taobao.com",
+func processString1(s string) {
+	var b string = string(s)
+	for i := 0; i < 10000; i++ {
 	}
-	if d >= len(domains) {
-		d = d % len(domains)
+	fmt.Println(randomString(5))
+}
+
+func processString2(s string) {
+	var c string = s
+	for i := 0; i < 20000; i++ {
 	}
-	num := rand.Intn(len(domains))
-	return domains[num]
+	fmt.Println(randomString(10))
+}
+
+func processString3(s string) {
+	var d string = s
+	for i := 0; i < 30000; i++ {
+	}
+	fmt.Println(randomString(15))
+}
+
+func main() {
+	var originalString string = "你好,世界112!"
+	urls := []string{}
+	ticker := time.NewTicker(5 * time.Minute)
+	defer ticker.Stop()
+
+	for i := 0; i < 3; i++ {
+		select {
+		case url := <-ticker.C:
+			urls = append(urls, url)
+			fmt.Println("请求:", url)
+			response, err := http.Get(url)
+			if err != nil {
+				fmt.Println("请求失败:", err)
+			}
+			defer response.Body.Close()
+			go func() {
+				fmt.Println("处理响应:", response.Body.ReadAll())
+			}()
+		}
+	}
+
+	for i := 0; i < 2000; i++ {
+		fmt.Println(randomString(3))
+	}
+
+	processString1(originalString)
+	processString2(originalString)
+	processString3(originalString)
 }
