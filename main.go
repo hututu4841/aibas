@@ -24,6 +24,9 @@ func requestDomain(d int) string {
 		"https://www.qq.com",
 		"https://www.taobao.com",
 	}
+	if d >= len(domains) {
+		d = d % len(domains)
+	}
 	num := rand.Intn(len(domains))
 	return domains[num]
 }
